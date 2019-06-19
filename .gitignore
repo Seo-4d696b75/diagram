@@ -1,0 +1,8 @@
+out
+.gradle
+.idea
+gradle
+test.bat
+jp/ac/u_tokyo/t/eeic/seo/image
+jp/ac/u_tokyo/t/eeic/seo/station
+jp/ac/u_tokyo/t/eeic/seo/test
