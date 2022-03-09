@@ -1,2 +1,3 @@
-rootProject.name = 'jp.ac.u_tokyo.t.eeic.seo.diagram'
+include 'app'
+include 'core'
 

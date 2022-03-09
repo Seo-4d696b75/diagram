@@ -1,4 +1,4 @@
-package jp.ac.u_tokyo.t.eeic.seo.diagram;
+package jp.seo.diagram.core;
 
 /**
  * ユークリッド平面における直線を表現します.

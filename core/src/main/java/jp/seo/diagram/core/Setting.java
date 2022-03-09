@@ -1,4 +1,4 @@
-package jp.ac.u_tokyo.t.eeic.seo.diagram;
+package jp.seo.diagram.core;
 
 /**
  * @author Seo-4d696b75
