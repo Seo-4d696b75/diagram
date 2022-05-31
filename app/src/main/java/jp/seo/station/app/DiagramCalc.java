@@ -6,9 +6,12 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 import jp.seo.diagram.core.*;
+import jp.seo.diagram.core.Point;
+import jp.seo.diagram.core.Rectangle;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -17,10 +20,10 @@ import java.util.stream.Stream;
 public class DiagramCalc {
 
     public static void main(String[] args) {
-        new DiagramCalc(args[0], args[1]);
+        new DiagramCalc(args[0]);
     }
 
-    private DiagramCalc(String srcFile, String dstFile) {
+    private DiagramCalc(String srcFile) {
         try {
             List<DiagramCalc.Station> list = new GsonBuilder()
                     .serializeNulls()
@@ -31,30 +34,52 @@ public class DiagramCalc {
                             }).getType()
                     );
             System.out.println("station size:" + list.size());
-            VoronoiDiagram diagram = new VoronoiDiagram(list);
+            DelaunayDiagram diagram = new DelaunayDiagram(list);
             diagram.split(new Rectangle(127.0D, 46.0D, 146.0D, 26.0D));
             System.out.println("adding edges. size : " + diagram.getEdges().size());
-            for (Station s : list) {
-                s.voronoi = diagram.getVoronoiArea(s);
-                s.next = new ArrayList<>();
-            }
-            for (Edge edge : diagram.getDelaunayEdges()) {
-                DiagramCalc.Station s1 = (DiagramCalc.Station) edge.a;
-                DiagramCalc.Station s2 = (DiagramCalc.Station) edge.b;
-                s1.next.add(s2.code);
-                s2.next.add(s1.code);
-            }
 
-            System.out.println("Kd-tree");
-            KdTree<DiagramCalc.Station> tree = new KdTree<>(list);
-            this.traverseTree(tree.getRoot());
-            String data = (new DiagramCalc.StationTree(tree.getRoot().point.code, list)).toJson();
-            this.save(data, new File(dstFile));
+            JFrame window = new JFrame();
+            window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            window.setSize(1024, 1024);
+            window.getContentPane().add(new MyCanvas(diagram.getTriangles()));
+            window.setVisible(true);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private static class MyCanvas extends JComponent {
+        MyCanvas(Iterable<Triangle> triangles) {
+            this.triangles = triangles;
+        }
+
+        private final Iterable<Triangle> triangles;
+
+        @Override
+        public void paint(Graphics g) {
+            for (Triangle t : triangles) {
+                drawLine(g, t.a, t.b);
+                drawLine(g, t.b, t.c);
+                drawLine(g, t.c, t.a);
+            }
+        }
+
+        final static int WIDTH = 1024;
+        final static int HEIGHT = 1024;
+
+        final static double EAST = 146.0;
+        final static double WEST = 127.0;
+        final static double SOUTH = 26.0;
+        final static double NORTH = 46.0;
+
+        private void drawLine(Graphics g, Point p1, Point p2) {
+            int x1 = (int) ((p1.getX() - WEST) / (EAST - WEST) * WIDTH);
+            int x2 = (int) ((p2.getX() - WEST) / (EAST - WEST) * WIDTH);
+            int y1 = (int) ((NORTH - p1.getY()) / (NORTH - SOUTH) * HEIGHT);
+            int y2 = (int) ((NORTH - p2.getY()) / (NORTH - SOUTH) * HEIGHT);
+            g.drawLine(x1, y1, x2, y2);
+        }
+    }
 
     private void traverseTree(KdTree.Node<Station> node) {
         KdTree.Node<Station> left = node.getLeftChild();
