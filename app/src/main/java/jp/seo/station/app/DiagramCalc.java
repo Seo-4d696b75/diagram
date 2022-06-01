@@ -35,7 +35,7 @@ public class DiagramCalc {
                     );
             System.out.println("station size:" + list.size());
             VoronoiDiagram diagram = new VoronoiDiagram(list);
-            diagram.split(new Rectangle(127.0D, 46.0D, 146.0D, 26.0D));
+            diagram.split(new Rectangle(112.0D, 60.0D, 160.0D, 20.0D));
             System.out.println("adding edges. size : " + diagram.getEdges().size());
 
             JFrame window = new JFrame();
