@@ -9,6 +9,7 @@ import jp.seo.diagram.core.*;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -32,7 +33,7 @@ public class DiagramCalc {
                     );
             System.out.println("station size:" + list.size());
             VoronoiDiagram diagram = new VoronoiDiagram(list);
-            diagram.split(new Rectangle(127.0D, 46.0D, 146.0D, 26.0D));
+            diagram.split(new Rectangle(112.0D, 60.0D, 160.0D, 20.0D));
             System.out.println("adding edges. size : " + diagram.getEdges().size());
             for (Station s : list) {
                 s.voronoi = diagram.getVoronoiArea(s);
@@ -72,7 +73,7 @@ public class DiagramCalc {
     }
 
     private String read(File file) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
         StringBuilder builder = new StringBuilder();
         String line = reader.readLine();
 
@@ -89,20 +90,20 @@ public class DiagramCalc {
     }
 
     private void save(String data, File file) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8));
         writer.write(data);
         writer.close();
     }
 
     private static class Station extends Point {
         @Expose
-        private double lat;
+        final private double lat;
         @Expose
-        private double lng;
+        final private double lng;
         @Expose
-        private int code;
+        final private int code;
         @Expose
-        private String name;
+        final private String name;
         @Expose(
                 deserialize = false
         )

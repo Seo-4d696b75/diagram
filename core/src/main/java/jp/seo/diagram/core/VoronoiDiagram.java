@@ -1,5 +1,7 @@
 package jp.seo.diagram.core;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.*;
 
 /**
@@ -53,9 +55,22 @@ public class VoronoiDiagram extends DelaunayDiagram {
                 Point p1 = t1.getCircumscribed().center;
                 Point p2 = t2.getCircumscribed().center;
                 Edge boundary = new Edge(p1, p2);
-                solvedEdge.add(boundary);
-                addEdge(boundary, edge.a);
-                addEdge(boundary, edge.b);
+                if (isInsideRect(border, boundary)) {
+                    // nothing
+                } else if (isInsideRect(border, p1)) {
+                    Point p = getBorderIntersection(border, boundary);
+                    boundary = new Edge(p, p1);
+                } else if (isInsideRect(border, p2)) {
+                    Point p = getBorderIntersection(border, boundary);
+                    boundary = new Edge(p, p2);
+                } else {
+                    boundary = null;
+                }
+                if (boundary != null) {
+                    solvedEdge.add(boundary);
+                    addEdge(boundary, edge.a);
+                    addEdge(boundary, edge.b);
+                }
             } else {
                 // ドロネー図の一番外側の辺
                 // 本当はこの三角形の外心を端点にもつ長さ無限の半直線が生えているのだが、
@@ -71,13 +86,16 @@ public class VoronoiDiagram extends DelaunayDiagram {
                         center.getX() + vector.getX() * direction * 100,
                         center.getY() + vector.getY() * direction * 100
                 );
-                Edge boundary = new Edge(center, outer);
-                solvedEdge.add(boundary);
-                addEdge(boundary, edge.a);
-                addEdge(boundary, edge.b);
-
+                Edge line = new Edge(center, outer);
+                if (!isOutsideRect(border, line)) {
+                    Point p = getBorderIntersection(border, line);
+                    Edge boundary = new Edge(center, p);
+                    solvedEdge.add(boundary);
+                    addEdge(boundary, edge.a);
+                    addEdge(boundary, edge.b);
+                }
             }
-            System.out.print(String.format(Locale.US, "\r%.2f%% complete  ", (double) cnt++ * 100 / size));
+            System.out.printf(Locale.US, "\r%.2f%% complete  ", (double) cnt++ * 100 / size);
         }
         System.out.println("\ncheck...");
         for (VoronoiArea area : areaMap.values()) {
@@ -90,6 +108,37 @@ public class VoronoiDiagram extends DelaunayDiagram {
         areaMap.computeIfAbsent(p, (VoronoiArea::new));
         VoronoiArea area = areaMap.get(p);
         area.addEdge(boundary);
+    }
+
+    @NotNull
+    private Point getBorderIntersection(Rectangle b, Edge line) {
+        Point p;
+        Edge top = new Edge(new BasePoint(b.left, b.top), new BasePoint(b.right, b.top));
+        p = top.getIntersection(line);
+        if (p != null) return p;
+        Edge right = new Edge(new BasePoint(b.right, b.top), new BasePoint(b.right, b.bottom));
+        p = right.getIntersection(line);
+        if (p != null) return p;
+        Edge bottom = new Edge(new BasePoint(b.left, b.bottom), new BasePoint(b.right, b.bottom));
+        p = bottom.getIntersection(line);
+        if (p != null) return p;
+        Edge left = new Edge(new BasePoint(b.left, b.top), new BasePoint(b.left, b.bottom));
+        p = left.getIntersection(line);
+        if (p != null) return p;
+        throw new RuntimeException("no intersection");
+    }
+
+    private boolean isInsideRect(Rectangle rect, Edge e) {
+        return isInsideRect(rect, e.a) && isInsideRect(rect, e.b);
+    }
+
+    private boolean isOutsideRect(Rectangle rect, Edge e) {
+        return !isInsideRect(rect, e.a) && !isInsideRect(rect, e.b);
+    }
+
+    private boolean isInsideRect(Rectangle rect, Point p) {
+        return rect.left <= p.getX() && p.getX() <= rect.right &&
+                rect.bottom <= p.getY() && p.getY() <= rect.top;
     }
 
     public static class VoronoiArea {
