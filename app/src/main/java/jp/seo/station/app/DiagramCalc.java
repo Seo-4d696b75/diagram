@@ -41,7 +41,7 @@ public class DiagramCalc {
             JFrame window = new JFrame();
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             window.setSize(1024, 1024);
-            window.getContentPane().add(new MyCanvas(diagram.getEdges()));
+            window.getContentPane().add(new MyCanvas(diagram));
             window.setVisible(true);
         } catch (IOException e) {
             e.printStackTrace();
@@ -49,15 +49,20 @@ public class DiagramCalc {
     }
 
     private static class MyCanvas extends JComponent {
-        MyCanvas(Iterable<Edge> edges) {
-            this.edges = edges;
+        MyCanvas(VoronoiDiagram diagram) {
+            this.diagram = diagram;
         }
 
-        private final Iterable<Edge> edges;
+        private final VoronoiDiagram diagram;
 
         @Override
         public void paint(Graphics g) {
-            for (Edge e : edges) {
+            g.setColor(Color.BLACK);
+            for (Edge e : diagram.getDelaunayEdges()) {
+                drawLine(g, e.a, e.b);
+            }
+            g.setColor(Color.red);
+            for (Edge e : diagram.getEdges()) {
                 drawLine(g, e.a, e.b);
             }
         }
@@ -65,10 +70,10 @@ public class DiagramCalc {
         final static int WIDTH = 1024;
         final static int HEIGHT = 1024;
 
-        final static double EAST = 153.0;
-        final static double WEST = 120.0;
-        final static double SOUTH = 20.0;
-        final static double NORTH = 53.0;
+        final static double EAST = 145.0;
+        final static double WEST = 140.0;
+        final static double SOUTH = 42.0;
+        final static double NORTH = 47.0;
 
         private void drawLine(Graphics g, Point p1, Point p2) {
             int x1 = (int) ((p1.getX() - WEST) / (EAST - WEST) * WIDTH);
