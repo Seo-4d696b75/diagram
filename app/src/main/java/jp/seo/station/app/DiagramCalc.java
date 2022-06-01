@@ -58,10 +58,6 @@ public class DiagramCalc {
         @Override
         public void paint(Graphics g) {
             g.setColor(Color.BLACK);
-            for (Edge e : diagram.getDelaunayEdges()) {
-                drawLine(g, e.a, e.b);
-            }
-            g.setColor(Color.red);
             for (Edge e : diagram.getEdges()) {
                 drawLine(g, e.a, e.b);
             }
@@ -70,10 +66,10 @@ public class DiagramCalc {
         final static int WIDTH = 1024;
         final static int HEIGHT = 1024;
 
-        final static double EAST = 145.0;
-        final static double WEST = 140.0;
-        final static double SOUTH = 42.0;
-        final static double NORTH = 47.0;
+        final static double EAST = 163.0;
+        final static double WEST = 110.0;
+        final static double SOUTH = 10.0;
+        final static double NORTH = 63.0;
 
         private void drawLine(Graphics g, Point p1, Point p2) {
             int x1 = (int) ((p1.getX() - WEST) / (EAST - WEST) * WIDTH);
