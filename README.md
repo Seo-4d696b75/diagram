@@ -69,7 +69,9 @@ java -jar ${path2jar} ${srcFile} ${dstFile}
 
 ### Github Actions
 
-// TODO
+`v${version}`という名前のtagをpushすると自動でpublish  
+
+[workflowファイル](./.github/workflows/publish.yml)
 
 ## 利用方法
 駅座標点からからボロノイ分割を計算するコンソールアプリケーションの例

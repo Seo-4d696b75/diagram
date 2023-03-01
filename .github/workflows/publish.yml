@@ -1,0 +1,33 @@
+name: Auto Publish
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+          cache: 'gradle' # restore caches for gradle automatically
+      - name: Check Version
+        id: check_version
+        run: |
+          version=$(echo ${{ github.ref }} | sed -e "s/^v\(.*\)/\1/")
+          echo "value=${version}" >> $GITHUB_OUTPUT
+      - name: Publish
+        env:
+          GITHUB_PACKAGE_USERNAME: Seo-4d696b75
+          GITHUB_PACKAGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_VERSION: ${{ steps.check_version.outputs.value }}
+        run: ./gradlew publish
