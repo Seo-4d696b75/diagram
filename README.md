@@ -1,56 +1,56 @@
 # diagram
+
 ドロネー図・ボロノイ図の描画をJavaで実装  
 [ドロネー図・ボロノイ図の描画アルゴリズムの説明](https://qiita.com/Seo-4d696b75/items/c088f5b853010507224c)
 
 ## モジュール構成
+
 - core  
   図形計算の処理関連ソース
 - app  
   `core`機能を利用して[駅データの座標点](https://github.com/Seo-4d696b75/station_database) からボロノイ分割を計算する
 
 ## core モジュール
-### ドロネー図
-**DelaunayDiagram.java**
-```java
-//母点の集合
-Collection<Point> points; 
-//すべての母点を含む矩形
-Rectangle rect; 
 
-DelaunayDiagram diagram = new DelaunayDiagram(points);
-diagram.split(rect);
+### ドロネー図
+
+**DelaunayDiagram.java**
+
+```kt
+//母点の集合
+val points: Collection<Point> = listOf()
+//すべての母点を含む矩形
+val rect = Rectangle(0, 0, 0, 0)
+
+val diagram = DelaunayDiagram(points)
+diagram.split(rect)
 
 //分割された三角形とその辺
-Set<Triangle> triangles = diagram.getTriangles();
-Set<Edge> edges = diagram.getEdges();
+val triangles = diagram.getTriangles()
+val edges = diagram.getEdges()
 ```
 
 ### ボロノイ図
-**VoronoiDiagram.java**
-```java
-//母点の集合
-Collection<Point> points; 
-//すべての母点を含む矩形
-Rectangle rect;
 
-VoronoiDiagram diagram = new VoronoiDiagram(points);
-diagram.split(rect);
+**VoronoiDiagram.java**
+
+```kt
+//母点の集合
+val points: Collection<Point> = listOf()
+//すべての母点を含む矩形
+val rect = Rectangle(0, 0, 0, 0)
+
+val diagram = VoronoiDiagram(points)
+diagram.split(rect)
 ```
 
-## app モジュール  
-### Gradleタスクの実行
+## app モジュール
+
 ```bash
 ./gradlew app:run --args="${srcFile} ${dstFile}"
 ```
 
-もしくは Run > Edit Configurations > Add から`jp.seo.station.app.DiagramCalc`をターゲットに実行を設定
-### jarの利用
-Build > Build Artifacts > diagram.app.main:jar
-
-`out`ディレクトリ下にjarファイルが出力されるので次のように利用する
-```bash
-java -jar ${path2jar} ${srcFile} ${dstFile}
-```
+もしくは Run > Edit Configurations > Add から`jp.seo.station.app.MainKt`をターゲットに実行を設定
 
 # Github Package + Gradle
 
@@ -60,23 +60,25 @@ java -jar ${path2jar} ${srcFile} ${dstFile}
 
 ### Local
 
-- 環境変数のセットアップ  
-  - GRADLE_PUBLISH_VERSION: パッケージのバージョン
-  - GITHUB_PACKAGE_USERNAME: Githubのアカウント名
-  - GITHUB_PACKAGE_TOKEN: GithubのアクセスToken（write:packagesの権限が必要）
+- 環境変数のセットアップ
+    - GRADLE_PUBLISH_VERSION: パッケージのバージョン
+    - GITHUB_PACKAGE_USERNAME: Githubのアカウント名
+    - GITHUB_PACKAGE_TOKEN: GithubのアクセスToken（write:packagesの権限が必要）
 - Gradleタスクの実行  
   `./gradlew assemble publish`
 
-### Github Actions
+### GitHub Actions
 
-`v${version}`という名前のtagをpushすると自動でpublish  
+`v${version}`という名前のtagをpushすると自動でpublish
 
 [workflowファイル](./.github/workflows/publish.yml)
 
 ## 利用方法
+
 駅座標点からからボロノイ分割を計算するコンソールアプリケーションの例
 
 `build.gradle.kt`
+
 ```gradle.kt
 plugins {
     id("java")
@@ -84,7 +86,7 @@ plugins {
 }
 
 application {
-    mainClass.set("jp.seo.station.app.DiagramCalc")
+    mainClass.set("jp.seo.station.app.MainKt")
 }
 
 repositories {
