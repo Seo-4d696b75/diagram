@@ -2,6 +2,7 @@ package jp.seo.station.app.data.geo
 
 import jp.seo.diagram.core.VoronoiDiagram.VoronoiArea
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class Polygon(
@@ -13,6 +14,7 @@ data class Polygon(
 data class PolygonFeature(
     val type: String = "Feature",
     val geometry: Polygon,
+    val properties: Map<String, JsonElement> = emptyMap(),
 ) {
     companion object {
         fun fromVoronoi(are: VoronoiArea) = PolygonFeature(
