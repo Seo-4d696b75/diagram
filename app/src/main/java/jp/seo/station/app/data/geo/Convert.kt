@@ -3,7 +3,9 @@ package jp.seo.station.app.data.geo
 import jp.seo.diagram.core.Point
 import jp.seo.diagram.core.VoronoiDiagram.VoronoiArea
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.descriptors.*
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonElement
@@ -34,13 +36,15 @@ object VoronoiSerializer : KSerializer<VoronoiArea> {
 
     override fun serialize(encoder: Encoder, value: VoronoiArea) {
         require(encoder is JsonEncoder)
-        val element = encoder.json.encodeToJsonElement(
-            if (value.enclosed) {
+        val element = if (value.enclosed) {
+            encoder.json.encodeToJsonElement(
                 PolygonFeature.fromVoronoi(value)
-            } else {
+            )
+        } else {
+            encoder.json.encodeToJsonElement(
                 LineStringFeature.fromVoronoi(value)
-            }
-        )
+            )
+        }
         encoder.encodeJsonElement(element)
     }
 
