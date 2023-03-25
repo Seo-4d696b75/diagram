@@ -28,6 +28,7 @@ object VoronoiSerializer : KSerializer<VoronoiArea> {
         get() = buildClassSerialDescriptor("VoronoiArea") {
             element<String>("type")
             element<JsonElement>("geometry")
+            element<JsonElement>("properties")
         }
 
     override fun deserialize(decoder: Decoder): VoronoiArea {

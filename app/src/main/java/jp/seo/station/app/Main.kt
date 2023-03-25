@@ -17,7 +17,10 @@ fun main(args: Array<String>) {
 }
 
 private fun calc(srcFile: String, dstFile: String) {
-    val json = Json { ignoreUnknownKeys = true }
+    val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
     val src = File(srcFile).readText()
     val stations = json.decodeFromString<List<Station>>(src)
     println("station size: ${stations.size}")
