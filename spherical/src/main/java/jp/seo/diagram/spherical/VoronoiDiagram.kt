@@ -5,12 +5,15 @@ class VoronoiDiagram constructor(
 ) : DelaunayDiagram(points) {
 
     private val _edge = mutableSetOf<Edge>()
-    private val _area = mutableMapOf<LatLng, VoronoiArea>()
+    private val _area = mutableMapOf<Vector, VoronoiArea>()
 
     override val edges: Set<Edge>
         get() = _edge
 
-    val area: Map<LatLng, VoronoiArea>
+    val delaunayEdges: Set<Edge>
+        get() = super.edges
+
+    val area: Map<Vector, VoronoiArea>
         get() = _area
 
     override fun split(border: Triangle) {
@@ -18,13 +21,14 @@ class VoronoiDiagram constructor(
         _area.clear()
         _edge.clear()
 
-        val addEdge = { e: Edge, v: Vector ->
-            val p = LatLng.vec(v)
+        val addEdge = { e: Edge, p: Vector ->
             _area.computeIfAbsent(p) { VoronoiArea() }
             requireNotNull(_area[p]).addEdge(e)
         }
 
-        super.edges.forEachIndexed { index, edge ->
+        println("calc voronoi")
+
+        super.edges.forEach { edge ->
             val pair = requireNotNull(edgeTriangleMap[edge])
             val t1 = pair.first
             val t2 = pair.second
@@ -51,7 +55,12 @@ class VoronoiDiagram constructor(
 class VoronoiArea {
 
     internal fun addEdge(edge: Edge) {
-        if (merge(edge)) {
+        if (list.isEmpty()) {
+            list.add(edge.a)
+            list.add(edge.b)
+            start = edge.a
+            end = edge.b
+        } else if (merge(edge)) {
             while (true) {
                 if (!pool.removeIf(this::merge) || pool.isEmpty()) break
             }
@@ -97,13 +106,13 @@ class VoronoiArea {
 
     val enclosed: Boolean
         get() {
-            require(pool.isNotEmpty())
+            require(pool.isEmpty())
             return start == end
         }
 
     val points: List<LatLng>
         get() {
-            require(pool.isNotEmpty())
+            require(pool.isEmpty())
             return mutableListOf(*list.toTypedArray()).apply {
                 if (start == end) removeAt(0)
             }.map { LatLng.vec(it) }
