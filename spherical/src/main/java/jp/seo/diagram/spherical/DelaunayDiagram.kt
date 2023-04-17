@@ -2,7 +2,7 @@ package jp.seo.diagram.spherical
 
 import java.util.*
 
-class DelaunayDiagram(points: Collection<LatLng>) {
+open class DelaunayDiagram(points: Collection<LatLng>) {
 
     private val points = mutableSetOf<Vector>()
     private val solvedTriangles = mutableSetOf<Triangle>()
@@ -13,7 +13,7 @@ class DelaunayDiagram(points: Collection<LatLng>) {
     private val trianglePairs = mutableMapOf<Edge, TrianglePair>()
     private val edgeQueue: Queue<Edge> = LinkedList()
 
-    val edges: Set<Edge>
+    open val edges: Set<Edge>
         get() = solvedEdges
 
     val edgeTriangleMap: Map<Edge, Pair<Triangle, Triangle?>>
@@ -23,7 +23,7 @@ class DelaunayDiagram(points: Collection<LatLng>) {
         this.points.addAll(points.map { it.vec })
     }
 
-    fun split(border: Triangle) {
+    open fun split(border: Triangle) {
         val start = System.currentTimeMillis()
 
         triangles.clear()
