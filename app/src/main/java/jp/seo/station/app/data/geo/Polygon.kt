@@ -1,6 +1,6 @@
 package jp.seo.station.app.data.geo
 
-import jp.seo.diagram.core.VoronoiDiagram.VoronoiArea
+import jp.seo.station.app.data.Voronoi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -17,11 +17,11 @@ data class PolygonFeature(
     val properties: Map<String, JsonElement> = emptyMap(),
 ) {
     companion object {
-        fun fromVoronoi(are: VoronoiArea) = PolygonFeature(
+        fun fromVoronoi(are: Voronoi) = PolygonFeature(
             geometry = Polygon(
                 coordinates = listOf(
                     are.points.toMutableList().also {
-                        it.add(it.last())
+                        it.add(it.first())
                     }.map { it.geoJson }
                 )
             )
