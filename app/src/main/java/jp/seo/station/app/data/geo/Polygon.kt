@@ -21,7 +21,7 @@ data class PolygonFeature(
             geometry = Polygon(
                 coordinates = listOf(
                     are.points.toMutableList().also {
-                        it.add(it.last())
+                        it.add(it.first())
                     }.map { it.geoJson }
                 )
             )
