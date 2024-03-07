@@ -6,7 +6,7 @@ import jp.seo.diagram.core.Rectangle
 import jp.seo.diagram.core.VoronoiDiagram
 import jp.seo.station.app.data.Result
 import jp.seo.station.app.data.Station
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -16,10 +16,12 @@ fun main(args: Array<String>) {
     calc(args[0], args[1])
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 private fun calc(srcFile: String, dstFile: String) {
     val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        explicitNulls = false
     }
     val src = File(srcFile).readText()
     val stations = json.decodeFromString<List<Station>>(src)
