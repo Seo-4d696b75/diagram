@@ -52,6 +52,61 @@ diagram.split(rect)
 
 もしくは Run > Edit Configurations > Add から`jp.seo.station.app.MainKt`をターゲットに実行を設定
 
+入力: 駅座標のリスト
+
+```json
+[
+  {
+    "code": 1110101,
+    "name": "函館",
+    "lat": 41.773709,
+    "lng": 140.726413
+  }
+]
+```
+
+出力: 各種図形計算の結果
+- [left, right: kd-tree構造](https://github.com/Seo-4d696b75/station_database/wiki/kdtree)
+- [next: ドロネー分割における隣接点の駅コード一覧](https://github.com/Seo-4d696b75/station_database/wiki/station-area)
+- [voronoi: ボロノイ分割の領域図形（GeoJSON形式）](https://github.com/Seo-4d696b75/station_database/wiki/geojson)
+
+```json
+{
+  "root": 3001218,
+  "node_list":[
+    {
+      "lat":41.773709,
+      "lng":140.726413,
+      "code":1110101,
+      "name":"函館",
+      "right":1110108,
+      "left":1120505,
+      "next":[9910514,1110102,9910518,9910622,9910621,9910515,9910623,9910517],
+      "voronoi":{
+        "type":"Feature",
+        "geometry":{
+          "type":"Polygon",
+          "coordinates":[
+            [
+              [140.72591,41.771256],
+              [140.717527,41.773829],
+              [140.71735,41.774204],
+              [140.714999,41.785757],
+              [140.714787,41.792259],
+              [140.72972,41.788694],
+              [140.730562,41.78452],
+              [140.731074,41.778908],
+              [140.72591,41.771256]
+            ]
+          ]
+        },
+        "properties":{}
+      }
+    }
+  ]
+}
+```
+
 # Github Package + Gradle
 
 他のプロジェクトから簡単に利用できます
