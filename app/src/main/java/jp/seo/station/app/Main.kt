@@ -7,6 +7,7 @@ import jp.seo.diagram.core.VoronoiDiagram
 import jp.seo.station.app.data.Result
 import jp.seo.station.app.data.Station
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
