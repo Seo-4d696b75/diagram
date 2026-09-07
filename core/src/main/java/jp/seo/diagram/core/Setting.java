@@ -6,19 +6,20 @@ package jp.seo.diagram.core;
  */
 public final class Setting {
 
-    private Setting(){}
+    private Setting() {
+    }
 
-    public static double error = Math.pow(2,-40);
+    public static double error = Math.pow(2, -40);
 
-    public static boolean isZero(double value){
+    public static boolean isZero(double value) {
         return Math.abs(value) <= error;
     }
 
-    public static boolean greaterThanZero(double value){
+    public static boolean greaterThanZero(double value) {
         return value >= -error;
     }
 
-    public static boolean lessThanZero(double value){
+    public static boolean lessThanZero(double value) {
         return value <= error;
     }
 
