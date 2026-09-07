@@ -1,8 +1,7 @@
 plugins {
-    id("java")
     id("maven-publish")
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 group = "com.github.seo4d696b75"
@@ -28,9 +27,9 @@ publishing {
 }
 
 dependencies {
-    implementation("org.jetbrains:annotations:19.0.0")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+    implementation(libs.jetbrains.annotation)
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 sourceSets {

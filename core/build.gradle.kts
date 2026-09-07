@@ -1,9 +1,9 @@
 plugins {
-    id("java")
+    alias(libs.plugins.kotlin.jvm)
 }
 
 dependencies {
-    implementation("org.jetbrains:annotations:19.0.0")
+    implementation(libs.jetbrains.annotation)
 }
 
 tasks.test {
