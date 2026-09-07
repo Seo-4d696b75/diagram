@@ -4,10 +4,10 @@ import jp.seo.diagram.core.KdTree
 import jp.seo.diagram.core.KdTree.Node
 import jp.seo.diagram.core.Rectangle
 import jp.seo.diagram.core.VoronoiDiagram
+import jp.seo.station.app.data.RawStation
 import jp.seo.station.app.data.Result
 import jp.seo.station.app.data.Station
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -25,9 +25,15 @@ private fun calc(srcFile: String, dstFile: String) {
         explicitNulls = false
     }
     val src = File(srcFile).readText()
-    val stations = json.decodeFromString<List<Station>>(src)
-    println("station size: ${stations.size}")
+    val input = json.decodeFromString<List<RawStation>>(src)
+    val result = input.calc()
+    val dst = json.encodeToString(result)
+    File(dstFile).writeText(dst)
+}
 
+internal fun List<RawStation>.calc(): Result {
+    val stations = map(::Station)
+    println("station size: ${stations.size}")
     val diagram = VoronoiDiagram(stations)
     diagram.split(Rectangle(112.0, 60.0, 160.0, 20.0))
     println("edge size: ${diagram.edges.size}")
@@ -49,12 +55,10 @@ private fun calc(srcFile: String, dstFile: String) {
     val tree = KdTree(stations)
     tree.root.traverseTree()
 
-    val result = Result(
+    return Result(
         root = tree.root.point.code,
-        nodes = stations,
+        nodes = stations.map(Station::toResult),
     )
-    val dst = json.encodeToString(result)
-    File(dstFile).writeText(dst)
 }
 
 private fun Node<Station>.traverseTree() {
