@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class Result(
     val root: Int,
     @SerialName("node_list")
-    val nodes: List<Station>
+    val nodes: List<Station>,
 ) {
     @Serializable
     data class Station(

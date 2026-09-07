@@ -18,12 +18,16 @@ fun main(args: Array<String>) {
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-private fun calc(srcFile: String, dstFile: String) {
-    val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        explicitNulls = false
-    }
+private fun calc(
+    srcFile: String,
+    dstFile: String,
+) {
+    val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            explicitNulls = false
+        }
     val src = File(srcFile).readText()
     val input = json.decodeFromString(ListSerializer(RawStation.serializer()), src)
     val result = input.calc()
