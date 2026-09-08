@@ -2,10 +2,16 @@ plugins {
     id("java-library")
     alias(libs.plugins.publish)
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 dependencies {
-    implementation(libs.jetbrains.annotation)
+    implementation(project(":core"))
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.serialization.json)
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
@@ -18,13 +24,13 @@ mavenPublishing {
 
     coordinates(
         groupId = "com.seo4d696b75.diagram",
-        artifactId = "core",
+        artifactId = "station",
         version = libs.versions.publish.get(),
     )
 
     pom {
         name.set("2d Diagram Calculation")
-        description.set("Simple implementations to calculate delaunay and voronoi diagram in 2-dimensional orthonormal system.")
+        description.set("Tools to calculate delaunay and voronoi diagram of station coordinates.")
         url.set("https://github.com/Seo-4d696b75/diagram")
 
         licenses {

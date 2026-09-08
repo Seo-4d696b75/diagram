@@ -16,4 +16,4 @@ jobs:
           java-version: "17"
           cache: "gradle"
       - name: run test
-        run: ./gradlew app:test
+        run: ./gradlew station:test

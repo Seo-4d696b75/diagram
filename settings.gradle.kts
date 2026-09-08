@@ -1,6 +1,7 @@
 rootProject.name = "diagram"
-include(":app")
+include(":station")
 include(":core")
+include(":sample")
 
 pluginManagement {
     repositories {
@@ -13,5 +14,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            // only for snapshots while development
+            url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+        }
     }
 }

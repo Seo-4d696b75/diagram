@@ -3,14 +3,36 @@
 ドロネー図・ボロノイ図の描画をJavaで実装  
 [ドロネー図・ボロノイ図の描画アルゴリズムの説明](https://qiita.com/Seo-4d696b75/items/c088f5b853010507224c)
 
-## モジュール構成
+[![Maven version](https://img.shields.io/maven-central/v/com.seo4d696b75.diagram/core)](https://central.sonatype.com/artifact/com.seo4d696b75.diagram/core)
+![License MIT](https://img.shields.io/badge/Apache_2.0-9E9F9F?label=License)]
 
-- core  
-  図形計算の処理関連ソース
-- app  
-  `core`機能を利用して[駅データの座標点](https://github.com/Seo-4d696b75/station_database) からボロノイ分割を計算する
+> [!IMPORTANT]
+> バージョン により公開方式が異なります
 
-## core モジュール
+| バージョン | repository | groupId | artifactId | 
+|-|-|-|-|
+| 0.2.x 以前 | GitHub Packages | com.github.seo4d696b75 | diagram |
+| 0.3.0 以降 | Maven Central | com.seo4d696b75.diagram | core, station |
+
+## 利用方法
+
+`build.gradle.kts`
+
+```kotlin
+dependencies {
+  // 駅座標の計算
+  implementation("com.seo4d696b75.diagram:station:$version")
+
+  // 図形計算の基本実装のみ
+  implementation("com.seo4d696b75.diagram:core:$version")
+}
+```
+
+参考：[sample モジュール](sample/README.md)は station パッケージを利用する簡単なコンソールアプリケーションの実装例です
+
+## core パッケージ
+
+基本的な図形計算の実装
 
 ### ドロネー図
 
@@ -44,13 +66,10 @@ val diagram = VoronoiDiagram(points)
 diagram.split(rect)
 ```
 
-## app モジュール
+## station パッケージ
 
-```bash
-./gradlew app:run --args="${srcFile} ${dstFile}"
-```
-
-もしくは Run > Edit Configurations > Add から`jp.seo.station.app.MainKt`をターゲットに実行を設定
+core を利用して[駅データの座標点](https://github.com/Seo-4d696b75/station_database)
+からボロノイ分割などを計算するロジックを提供する
 
 入力: 駅座標のリスト
 
@@ -107,62 +126,69 @@ diagram.split(rect)
 }
 ```
 
-# Github Package + Gradle
-
-他のプロジェクトから簡単に利用できます
-
 ## Publish方法
 
-### Local
+以下の状態を前提とする
 
-- 環境変数のセットアップ
-    - GRADLE_PUBLISH_VERSION: パッケージのバージョン
-    - GITHUB_PACKAGE_USERNAME: Githubのアカウント名
-    - GITHUB_PACKAGE_TOKEN: GithubのアクセスToken（write:packagesの権限が必要）
-- Gradleタスクの実行  
-  `./gradlew assemble publish`
+- GPGによる署名方法は準備済み（鍵を生成済み）
+- 署名に使用するのは主鍵ではなく副鍵
+- Central Portalにアカウントを作成済み・namespaceも取得済み
 
-### GitHub Actions
+### 0. GPG公開鍵の送信（初回のみ）
 
-`v${version}`という名前のtagをpushすると自動でpublish
+Gitコミットへの署名だけでは不十分。
+Maven Centralへの公開には、鍵サーバーへの公開鍵の登録が必要
 
-[workflowファイル](./.github/workflows/publish.yml)
-
-## 利用方法
-
-駅座標点からからボロノイ分割を計算するコンソールアプリケーションの例
-
-`build.gradle.kt`
-
-```gradle.kt
-plugins {
-    id("java")
-    id("application")
-}
-
-application {
-    mainClass.set("jp.seo.station.app.MainKt")
-}
-
-repositories {
-    maven {
-        name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/Seo-4d696b75/diagram")
-        credentials {
-            username = "your_github_name"
-            password = "your_github_access_token"
-        }
-    }
-    mavenCentral()
-}
-
-dependencies {
-    implementation("com.github.seo4d696b75:diagram:0.1.0")
-}
+```shell
+gpg --keyserver keyserver.ubuntu.com --send-keys $id
 ```
 
-実行
+### 1. バージョン更新
 
-```bash
-./gradlew run --args="${srcFile} ${dstFile}"
+- libs.versions.toml `versions.publish` を更新する
+- 署名付きのタグを打つ `git tag -s $name -m $message`
+
+### 2. UserToken確認
+
+初回・有効期限切れの場合は[再発行が必要です](#usertoken取得)
+
+https://central.sonatype.com/usertoken
+
+`~/.gradle/gradle.properties`ファイルに記載しておく
+
+```properties
+mavenCentralUsername=username
+mavenCentralPassword=the_password
 ```
+
+### 3. 署名用の鍵ID確認
+
+公開スクリプト実行時に必要な鍵IDを確認する
+
+```shell
+gpg --list-secret-keys --keyid-format=short
+```
+
+出力例の `ssb ed25519/` の `/` 以降の8文字（Short形式）を使用
+
+```shell
+sec#  ed25519/${主鍵のkeyid} ${主鍵の有効期限} [C]
+uid         [ unknown] ${user.name} <${user.email}>
+ssb   ed25519/${副鍵のkeyid} ${副鍵の有効期限} [S]
+```
+
+### 4. 公開スクリプトの実行
+
+```shell
+./publish.sh YOUR_KEY_ID YOUR_PASSPHRASE
+```
+
+スクリプトは以下の処理を自動で行います：
+
+- GPG秘密鍵のエクスポート（メモリ内のみ）
+- 環境変数経由でGradleへ署名情報を渡す
+- [gradle-maven-publish-plugin](https://github.com/vanniktech/gradle-maven-publish-plugin) の実行
+
+### 5. 確認
+
+https://central.sonatype.com/publishing/deployments
