@@ -2,9 +2,10 @@ package jp.seo.diagram.core;
 
 /**
  * ユークリッド平面における直線を表現します.
- * 一般に直線は適当な3パラメータを用いてax+by+c=0の形で表現できます.ただしa==0 && b==0 は除きます
+ * 一般に直線は適当な3パラメータを用いて <code>ax+by+c=0</code> の形で表現できます.
+ * ただし <code>a==0 &amp;&amp; b==0</code> は除きます.
  * 初期化時にこの3パラメータは以下のように正規化されますので誤差に注意が必要です.<br>
- * <Ul>
+ * <ul>
  * <li>b!=0の時はb=1となるように</li>
  * <li>b==0の時はa=1となるように</li>
  * </ul>
@@ -42,7 +43,7 @@ public class Line {
     /**
      * ax+by+c=0の形で表現できる直線
      *
-     * @throws IllegalArgumentException a==0 && b==0
+     * @throws IllegalArgumentException a==0 &amp;&amp; b==0
      */
     public Line(double a, double b, double c) {
         //!!! a==0 && b==0 is not allowed !!!

@@ -13,7 +13,7 @@ public class Circle {
      *
      * @param center 中心の座標
      * @param radius 半径
-     * @throws IllegalArgumentException if radius <= 0
+     * @throws IllegalArgumentException if <code>radius &lt;= 0</code>
      */
     public Circle(Point center, double radius) {
         if (radius <= 0) throw new IllegalArgumentException("negative radius");

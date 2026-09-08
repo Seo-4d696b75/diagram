@@ -69,7 +69,8 @@ public class Edge {
 
     /**
      * この線分を(index):(1-index)の比で内分する点を計算します.<br>
-     * <strong>注意 </strong>{@link Point#compareTo(Point) 座標点の自然順序付け}によって決まるa<bの関係において、
+     * <strong>注意 </strong>{@link Point#compareTo(Point) 座標点の自然順序付け}によって決まる
+     * a&lt;b の関係において、
      * 線分ABを(index):(1-index)の比で内分するので方向に注意する.{@code index<0}の場合は外分点になる.
      *
      * @param index (0,1) => 内分点
