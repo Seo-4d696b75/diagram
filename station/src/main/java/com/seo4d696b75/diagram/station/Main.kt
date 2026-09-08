@@ -1,12 +1,12 @@
-package jp.seo.station.app
+package com.seo4d696b75.diagram.station
 
-import jp.seo.diagram.core.KdTree
-import jp.seo.diagram.core.KdTree.Node
-import jp.seo.diagram.core.Rectangle
-import jp.seo.diagram.core.VoronoiDiagram
-import jp.seo.station.app.data.Result
-import jp.seo.station.app.data.Station
-import jp.seo.station.app.data.StationPoint
+import com.seo4d696b75.diagram.core.KdTree
+import com.seo4d696b75.diagram.core.KdTree.Node
+import com.seo4d696b75.diagram.core.Rectangle
+import com.seo4d696b75.diagram.core.VoronoiDiagram
+import com.seo4d696b75.diagram.station.model.Result
+import com.seo4d696b75.diagram.station.model.Station
+import com.seo4d696b75.diagram.station.model.StationPoint
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json

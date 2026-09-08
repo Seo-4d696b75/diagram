@@ -1,4 +1,4 @@
-package jp.seo.diagram.core;
+package com.seo4d696b75.diagram.core;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

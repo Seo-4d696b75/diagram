@@ -1,11 +1,11 @@
-package jp.seo.station.app.data
+package com.seo4d696b75.diagram.station.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 /**
- * GeoJSON model for [jp.seo.diagram.core.VoronoiDiagram.VoronoiArea]
+ * GeoJSON model for [com.seo4d696b75.diagram.core.VoronoiDiagram.VoronoiArea]
  */
 @Serializable
 data class VoronoiFeature(

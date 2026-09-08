@@ -1,7 +1,7 @@
-package jp.seo.station.app.data
+package com.seo4d696b75.diagram.station.model
 
-import jp.seo.diagram.core.Point
-import jp.seo.diagram.core.VoronoiDiagram.VoronoiArea
+import com.seo4d696b75.diagram.core.Point
+import com.seo4d696b75.diagram.core.VoronoiDiagram.VoronoiArea
 import kotlinx.serialization.Serializable
 import kotlin.math.pow
 import kotlin.math.roundToInt

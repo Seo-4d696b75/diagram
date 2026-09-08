@@ -1,7 +1,8 @@
 package jp.seo.station.app
 
-import jp.seo.station.app.data.Result
-import jp.seo.station.app.data.Station
+import com.seo4d696b75.diagram.station.calculateDiagram
+import com.seo4d696b75.diagram.station.model.Result
+import com.seo4d696b75.diagram.station.model.Station
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

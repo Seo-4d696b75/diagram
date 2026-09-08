@@ -1,4 +1,4 @@
-package jp.seo.station.app.data
+package com.seo4d696b75.diagram.station.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
