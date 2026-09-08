@@ -1,5 +1,5 @@
 [versions]
-publish = "0.3.0-SNAPSHOT"
+publish = "0.3.0"
 kotlin = "2.2.0"
 junitJupiter = "6.1.3"
 
