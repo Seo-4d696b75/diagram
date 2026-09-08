@@ -1,6 +1,13 @@
 package jp.seo.diagram.core;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * @author Seo-4d696b75
@@ -8,7 +15,7 @@ import java.util.*;
  */
 public class Polygon implements Iterable<Point> {
 
-    public static class Builder{
+    public static class Builder {
 
         private List<EdgeGroup> groups;
         private boolean closed = false;
@@ -16,54 +23,58 @@ public class Polygon implements Iterable<Point> {
         private Set<Edge> edgeSet;
         private Set<Point> solvedPointSet;
 
-        private class EdgeGroup{
-            EdgeGroup(Edge edge){
+        private class EdgeGroup {
+            EdgeGroup(Edge edge) {
                 list = new LinkedList<>();
                 list.add(edge.a);
                 list.add(edge.b);
                 p1 = edge.a;
                 p2 = edge.b;
             }
+
             List<Point> list;
-            Point p1,p2;
-            boolean closed(){
+            Point p1, p2;
+
+            boolean closed() {
                 return Point.isMatch(p1, p2);
             }
-            boolean merge(EdgeGroup group){
-                if ( p1.equals(group.p1) ){
+
+            boolean merge(EdgeGroup group) {
+                if (p1.equals(group.p1)) {
                     solvedPointSet.add(p1);
                     p1 = group.p2;
                     group.list.remove(0);
-                    for ( Point point : group.list ){
+                    for (Point point : group.list) {
                         this.list.add(0, point);
                     }
-                }else if ( p1.equals(group.p2) ){
+                } else if (p1.equals(group.p2)) {
                     solvedPointSet.add(p1);
                     p1 = group.p1;
                     this.list.remove(0);
                     group.list.addAll(this.list);
                     this.list = group.list;
-                }else if ( p2.equals(group.p1) ){
+                } else if (p2.equals(group.p1)) {
                     solvedPointSet.add(p2);
                     p2 = group.p2;
                     group.list.remove(0);
                     this.list.addAll(group.list);
-                }else if ( p2.equals(group.p2) ){
+                } else if (p2.equals(group.p2)) {
                     solvedPointSet.add(p2);
                     p2 = group.p1;
-                    for ( int i=group.list.size()-2 ; i>=0 ; i-- ){
+                    for (int i = group.list.size() - 2; i >= 0; i--) {
                         this.list.add(group.list.get(i));
                     }
-                }else{
+                } else {
                     return false;
                 }
                 return true;
             }
+
             @Override
-            public String toString(){
+            public String toString() {
                 StringBuilder builder = new StringBuilder();
                 builder.append("Builder#Group{point_list:[\n");
-                for ( Point p : list ){
+                for (Point p : list) {
                     builder.append(p.toString());
                     builder.append('\n');
                 }
@@ -72,7 +83,7 @@ public class Polygon implements Iterable<Point> {
             }
         }
 
-        public Builder(){
+        public Builder() {
             groups = new ArrayList<>();
             edgeSet = new HashSet<>();
             solvedPointSet = new HashSet<>();
@@ -82,19 +93,20 @@ public class Polygon implements Iterable<Point> {
         /**
          * ポリゴンを構成する辺を追加する.<br>
          * 順番に追加する必要はない
+         *
          * @param edge
          * @throws IllegalStateException if このポリゴンが既に閉じている
          */
-        public void append(Edge edge){
-            if ( closed ){
+        public void append(Edge edge) {
+            if (closed) {
                 throw new IllegalStateException("Polygon already closed.");
             }
-            if ( !edgeSet.add(edge) ) return;
-            if ( solvedPointSet.contains(edge.a) || solvedPointSet.contains(edge.b) ){
+            if (!edgeSet.add(edge)) return;
+            if (solvedPointSet.contains(edge.a) || solvedPointSet.contains(edge.b)) {
                 throw new IllegalArgumentException("Point already appended and connected. " + edge.toString());
             }
             EdgeGroup group = new EdgeGroup(edge);
-            groups.removeIf( group::merge );
+            groups.removeIf(group::merge);
             /*for (Iterator<EdgeGroup> iterator = groups.iterator() ; iterator.hasNext() ; ){
                 EdgeGroup next = iterator.next();
                 if ( group.merge(next) ){
@@ -105,30 +117,31 @@ public class Polygon implements Iterable<Point> {
             closed = groups.size() == 1 && group.closed();
         }
 
-        public boolean isClosed(){
+        public boolean isClosed() {
             return closed;
         }
 
-        public boolean isLine(){
+        public boolean isLine() {
             return groups.size() == 1;
         }
 
-        public List<Point> getLine(){
-            if ( isLine() ){
+        public List<Point> getLine() {
+            if (isLine()) {
                 return groups.get(0).list;
-            }else{
+            } else {
                 return null;
             }
         }
 
         /**
          * ポリゴンに変換
+         *
          * @return Null if まだ閉じていない
          */
-        public Polygon build(){
-            if ( closed ){
+        public Polygon build() {
+            if (closed) {
                 EdgeGroup group = groups.get(0);
-                group.list.remove(group.list.size()-1);
+                group.list.remove(group.list.size() - 1);
                 // 自己交錯は考慮しない
                 return new Polygon(group.list);
             }
@@ -136,17 +149,16 @@ public class Polygon implements Iterable<Point> {
         }
 
 
-
     }
 
-    public Polygon(List<? extends Point> points){
+    public Polygon(List<? extends Point> points) {
         this.points = new ArrayList<>(points.size());
         this.points.addAll(points);
     }
 
     private List<Point> points;
 
-    public int size(){
+    public int size() {
         return points.size();
     }
 
@@ -155,14 +167,14 @@ public class Polygon implements Iterable<Point> {
         return points.iterator();
     }
 
-    public List<Point> getPoints(){
+    public List<Point> getPoints() {
         return points;
     }
 
-    public List<Edge> getEdges(){
+    public List<Edge> getEdges() {
         List<Edge> list = new ArrayList<>(size());
-        Point previous = points.get(size()-1);
-        for ( Point next : points ){
+        Point previous = points.get(size() - 1);
+        for (Point next : points) {
             list.add(new Edge(previous, next));
             previous = next;
         }
@@ -170,12 +182,12 @@ public class Polygon implements Iterable<Point> {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append("Polygon{size:");
         builder.append(points.size());
         builder.append(",points:[\n");
-        for ( Point p : points ){
+        for (Point p : points) {
             builder.append(p.toString());
             builder.append('\n');
         }
@@ -183,10 +195,10 @@ public class Polygon implements Iterable<Point> {
         return builder.toString();
     }
 
-    public static class LoopIterator<E> implements ListIterator<E>{
+    public static class LoopIterator<E> implements ListIterator<E> {
 
-        LoopIterator(List<E> list, int startIndex, boolean forward){
-            if ( startIndex < 0 || startIndex >= list.size() ){
+        LoopIterator(List<E> list, int startIndex, boolean forward) {
+            if (startIndex < 0 || startIndex >= list.size()) {
                 throw new IndexOutOfBoundsException();
             }
             mSize = list.size();
@@ -196,11 +208,11 @@ public class Polygon implements Iterable<Point> {
             reset();
         }
 
-        LoopIterator(List<E> list, int startIndex){
+        LoopIterator(List<E> list, int startIndex) {
             this(list, startIndex, true);
         }
 
-        LoopIterator(List<E> list){
+        LoopIterator(List<E> list) {
             this(list, 0, true);
         }
 
@@ -211,17 +223,17 @@ public class Polygon implements Iterable<Point> {
         private int mCurrentIndex;
         private int mCanRemove;
 
-        public E peekNext(){
-            return hasNext() ? mList.get(mCurrentIndex%mSize) : null;
+        public E peekNext() {
+            return hasNext() ? mList.get(mCurrentIndex % mSize) : null;
         }
 
-        public E peekPrevious(){
+        public E peekPrevious() {
             return hasPrevious() ? mList.get((mCurrentIndex - mDirection) % mSize) : null;
         }
 
         @Override
-        public E next(){
-            if ( hasNext() ) {
+        public E next() {
+            if (hasNext()) {
                 mCanRemove = 1;
                 E next = mList.get(mCurrentIndex % mSize);
                 mCurrentIndex += mDirection;
@@ -237,7 +249,7 @@ public class Polygon implements Iterable<Point> {
 
         @Override
         public E previous() {
-            if ( hasPrevious() ){
+            if (hasPrevious()) {
                 mCanRemove = 0;
                 mCurrentIndex -= mDirection;
                 return mList.get(mCurrentIndex % mSize);
@@ -257,13 +269,13 @@ public class Polygon implements Iterable<Point> {
 
         @Override
         public void remove() {
-            if ( mCanRemove < 0 ){
+            if (mCanRemove < 0) {
                 throw new IllegalStateException();
             }
-            final int targetIndex = mCurrentIndex - mDirection*mCanRemove;
+            final int targetIndex = mCurrentIndex - mDirection * mCanRemove;
             mList.remove(targetIndex % mSize);
             mCanRemove = -1;
-            if ( targetIndex%mSize < mStartIndex%mSize ) mStartIndex--;
+            if (targetIndex % mSize < mStartIndex % mSize) mStartIndex--;
             mSize--;
             mCurrentIndex = mDirection > 0 ? targetIndex - 1 : targetIndex - 2;
             mStartIndex--;
@@ -275,33 +287,33 @@ public class Polygon implements Iterable<Point> {
         }
 
         @Override
-        public boolean hasNext(){
+        public boolean hasNext() {
             return nextIndex() > mStartIndex - mSize && nextIndex() < mStartIndex + mSize;
         }
 
-        public void changeDirection(){
+        public void changeDirection() {
             setDirection(mDirection < 0);
         }
 
-        public void setDirection(boolean forward){
-            if ( forward == mDirection > 0 ) return;
+        public void setDirection(boolean forward) {
+            if (forward == mDirection > 0) return;
             mDirection = -mDirection;
             mCurrentIndex = mCurrentIndex + mDirection;
             reset();
         }
 
-        public void reset(){
-            mStartIndex = mCurrentIndex%mSize + mSize;
+        public void reset() {
+            mStartIndex = mCurrentIndex % mSize + mSize;
             mCurrentIndex = mStartIndex;
             mCanRemove = -1;
         }
 
         @Override
-        public void add(E element){
+        public void add(E element) {
             mCanRemove = -1;
             final int targetIndex = mDirection > 0 ? mCurrentIndex : mCurrentIndex + 1;
-            mList.add(targetIndex%mSize, element);
-            if ( targetIndex%mSize <= mStartIndex%mSize ) mStartIndex++;
+            mList.add(targetIndex % mSize, element);
+            if (targetIndex % mSize <= mStartIndex % mSize) mStartIndex++;
             mSize++;
             mCurrentIndex = mDirection > 0 ? targetIndex + 2 : targetIndex;
             mStartIndex++;
@@ -309,25 +321,25 @@ public class Polygon implements Iterable<Point> {
 
     }
 
-    public static class MergeBuilder{
+    public static class MergeBuilder {
 
-        public MergeBuilder(){
+        public MergeBuilder() {
             mList = new LinkedList<>();
         }
 
-        public void append(Polygon polygon){
+        public void append(Polygon polygon) {
             Entry entry = new Entry(polygon);
-            for ( ListIterator<Entry> iterator = mList.listIterator() ; iterator.hasNext() ; ){
+            for (ListIterator<Entry> iterator = mList.listIterator(); iterator.hasNext(); ) {
                 Entry item = iterator.next();
-                if ( entry.merge(item) ) iterator.remove();
+                if (entry.merge(item)) iterator.remove();
             }
             mList.add(entry);
         }
 
-        public List<Polygon> build(){
+        public List<Polygon> build() {
             List<Polygon> polygons = new ArrayList<>(mList.size());
-            for ( Entry item : mList ){
-                if ( item.mHasHollow ){
+            for (Entry item : mList) {
+                if (item.mHasHollow) {
                     return null;
                 }
                 polygons.add(new Polygon(item.mPointList));
@@ -337,9 +349,9 @@ public class Polygon implements Iterable<Point> {
 
         private final List<Entry> mList;
 
-        private static class Entry{
+        private static class Entry {
 
-            Entry(Polygon polygon){
+            Entry(Polygon polygon) {
                 mPointList = new LinkedList<>();
                 mPointSet = new HashSet<>();
                 mHasHollow = false;
@@ -350,14 +362,14 @@ public class Polygon implements Iterable<Point> {
             boolean mHasHollow;
 
 
-            boolean merge(Entry entry){
+            boolean merge(Entry entry) {
                 final List<Point> list = entry.mPointList;
                 final int size = list.size();
-                for ( int i=0 ; i<size ; i++ ){
-                    if ( mPointSet.contains(list.get(i)) ){
+                for (int i = 0; i < size; i++) {
+                    if (mPointSet.contains(list.get(i))) {
                         int j = 0;
-                        for ( ; j<mPointList.size() ; j++ ){
-                            if ( mPointList.get(j).equals(list.get(i)) ) break;
+                        for (; j < mPointList.size(); j++) {
+                            if (mPointList.get(j).equals(list.get(i))) break;
                         }
                         LoopIterator<Point> self = new LoopIterator<Point>(mPointList, j);
                         LoopIterator<Point> other = new LoopIterator<Point>(list, i);
@@ -366,13 +378,13 @@ public class Polygon implements Iterable<Point> {
                         other.previous();
                         Point previous = self.peekPrevious();
                         self.next();
-                        if ( self.peekNext().equals(next) ){
+                        if (self.peekNext().equals(next)) {
                             self.previous();
                             merge(self, other);
-                        }else if ( previous.equals(next) ){
+                        } else if (previous.equals(next)) {
                             self.setDirection(false);
                             merge(self, other);
-                        }else{
+                        } else {
                             return false;
                         }
                         return true;
@@ -381,11 +393,11 @@ public class Polygon implements Iterable<Point> {
                 return false;
             }
 
-            private void merge(LoopIterator<Point> self, LoopIterator<Point> other){
-                while ( true ){
+            private void merge(LoopIterator<Point> self, LoopIterator<Point> other) {
+                while (true) {
                     Point nextSelf = self.peekNext();
                     Point nextOther = other.peekNext();
-                    if ( !nextOther.equals(nextSelf) ) break;
+                    if (!nextOther.equals(nextSelf)) break;
                     self.next();
                     self.remove();
                     other.next();
@@ -393,35 +405,35 @@ public class Polygon implements Iterable<Point> {
                 }
                 self.changeDirection();
                 final boolean hasHollow = mHasHollow;
-                while( other.hasNext() ){
+                while (other.hasNext()) {
                     Point next = other.next();
-                    if ( !mPointSet.add(next) ) mHasHollow = true;
+                    if (!mPointSet.add(next)) mHasHollow = true;
                     self.add(next);
                 }
-                if ( hasHollow ) mHasHollow = checkHollow();
+                if (hasHollow) mHasHollow = checkHollow();
             }
 
-            private boolean checkHollow(){
-                Point previous = mPointList.get(mPointList.size()-1);
+            private boolean checkHollow() {
+                Point previous = mPointList.get(mPointList.size() - 1);
                 final int size = mPointList.size();
-                for ( int i=0 ; i<size ; i++ ){
-                    Point next  = mPointList.get(i);
-                    if ( next.equals(previous) ){
-                        int start = size + i -1;
+                for (int i = 0; i < size; i++) {
+                    Point next = mPointList.get(i);
+                    if (next.equals(previous)) {
+                        int start = size + i - 1;
                         int end = size + i;
-                        while ( mPointList.get(start%size).equals(mPointList.get(end%size)) ){
+                        while (mPointList.get(start % size).equals(mPointList.get(end % size))) {
                             start--;
                             end++;
                         }
-                        LoopIterator<Point> iterator = new LoopIterator<Point>(mPointList, start%size);
-                        for ( i=0 ; i<= end-start ; i++ ){
+                        LoopIterator<Point> iterator = new LoopIterator<Point>(mPointList, start % size);
+                        for (i = 0; i <= end - start; i++) {
                             iterator.next();
                             iterator.remove();
                         }
                         mPointSet.clear();
                         boolean hollow = false;
-                        for ( Point point : mPointList ){
-                            if ( !mPointSet.add(point) ) hollow = true;
+                        for (Point point : mPointList) {
+                            if (!mPointSet.add(point)) hollow = true;
                         }
                         return hollow;
                     }

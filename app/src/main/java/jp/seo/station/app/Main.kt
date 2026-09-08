@@ -8,7 +8,7 @@ import jp.seo.station.app.data.RawStation
 import jp.seo.station.app.data.Result
 import jp.seo.station.app.data.Station
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -18,16 +18,20 @@ fun main(args: Array<String>) {
 }
 
 @OptIn(ExperimentalSerializationApi::class)
-private fun calc(srcFile: String, dstFile: String) {
-    val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        explicitNulls = false
-    }
+private fun calc(
+    srcFile: String,
+    dstFile: String,
+) {
+    val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            explicitNulls = false
+        }
     val src = File(srcFile).readText()
-    val input = json.decodeFromString<List<RawStation>>(src)
+    val input = json.decodeFromString(ListSerializer(RawStation.serializer()), src)
     val result = input.calc()
-    val dst = json.encodeToString(result)
+    val dst = json.encodeToString(Result.serializer(), result)
     File(dstFile).writeText(dst)
 }
 

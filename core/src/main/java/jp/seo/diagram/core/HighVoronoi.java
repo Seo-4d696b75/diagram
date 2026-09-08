@@ -3,11 +3,18 @@ package jp.seo.diagram.core;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Queue;
+import java.util.Set;
 
 /**
  * ドロネー図における母点を結ぶ線分の垂直二等分線は互いに交差し、その交点によって二等分線は分割される.
  * その交点をNode、交点によって分割されてできた線分を辺Edgeにもつグラフ構造を考える
+ *
  * @author Seo-4d696b75
  * @version 2019/06/12
  */
@@ -23,6 +30,7 @@ public class HighVoronoi {
         /**
          * 指定された点に隣接する頂点集合を返す.
          * 条件を満たす要素がない場合は空のリストを返す.<br>
+         *
          * @param point Non Null
          * @return Non Null
          */
@@ -33,7 +41,8 @@ public class HighVoronoi {
     public interface ResultCallback {
         /**
          * 各n次ボロノイ図が計算されると順次呼ばれる
-         * @param index 次数-1 [0,({@link HighVoronoi#solve(int, Point, PointProvider, ResultCallback)  指定した値}-1)]
+         *
+         * @param index  次数-1 [0,({@link HighVoronoi#solve(int, Point, PointProvider, ResultCallback)  指定した値}-1)]
          * @param points 閉じた多角形
          */
         void onResolved(int index, Polygon points, long time);
@@ -60,8 +69,9 @@ public class HighVoronoi {
 
     /**
      * 計算する
-     * @param level [1,level]の次数に関して計算する
-     * @param center 目的の中心点
+     *
+     * @param level    [1,level]の次数に関して計算する
+     * @param center   目的の中心点
      * @param resolver 隣接頂点を定義するオブジェクト
      * @param callback 各次数で計算が終わる度にコールされる
      * @return [1,level]の次数で計算された多角形の配列, [index-1]のポリゴンがindex次の解
@@ -87,20 +97,20 @@ public class HighVoronoi {
 
         addedPoint.add(center);
         requestedPoint.add(center);
-        for ( Point point : resolver.getNeighbors(center) ){
+        for (Point point : resolver.getNeighbors(center)) {
             addedPoint.add(point);
             addBisector(point);
         }
 
         List<Node> list = null;
 
-        for ( int targetLevel = 1 ; targetLevel <= level ; targetLevel++ ){
+        for (int targetLevel = 1; targetLevel <= level; targetLevel++) {
             long loopTime = System.currentTimeMillis();
 
             startThread();
 
             list = traverse(list);
-            for ( Node n : list ) n.onSolved(targetLevel);
+            for (Node n : list) n.onSolved(targetLevel);
 
             Polygon polygon = new Polygon(list);
             result[targetLevel - 1] = polygon;
@@ -115,11 +125,11 @@ public class HighVoronoi {
         }
 
 
-        for ( Bisector bisector : bisectors ){
+        for (Bisector bisector : bisectors) {
             bisector.release();
         }
 
-        if ( callback != null ){
+        if (callback != null) {
             callback.onCompleted(result, System.currentTimeMillis() - time);
         }
         //System.out.println("HighVoronoi#solve > " + String.format(Locale.US, "time:%dms vertex:%d", System.currentTimeMillis() - time, bisectors.size()));
@@ -128,54 +138,54 @@ public class HighVoronoi {
 
     }
 
-    private List<Node> traverse(List<Node> list){
+    private List<Node> traverse(List<Node> list) {
         Node next = null;
         Point previous = null;
-        if ( list == null ){
+        if (list == null) {
             Set<Point> history = new HashSet<>();
             Bisector sample = bisectors.get(0);
             next = sample.intersections.get(1).node;
             previous = sample.intersections.get(0);
-            while ( history.add(next) ){
+            while (history.add(next)) {
                 Node current = next;
                 next = current.nextDown(previous);
                 previous = current;
             }
-        }else{
-            previous = list.get(list.size()-1);
-            for ( Node n : list ){
+        } else {
+            previous = list.get(list.size() - 1);
+            for (Node n : list) {
                 next = n.nextUp(previous);
                 previous = n;
-                if ( next != null && !next.hasSolved() ) break;
+                if (next != null && !next.hasSolved()) break;
             }
         }
 
-        if ( next == null || previous == null || next.hasSolved() ){
+        if (next == null || previous == null || next.hasSolved()) {
             throw new RuntimeException("piyo");
         }
 
         Node start = next;
         list = new LinkedList<>();
         list.add(start);
-        while ( true ) {
+        while (true) {
             requestExtension(next.p1.line.delaunayPoint);
             requestExtension(next.p2.line.delaunayPoint);
             Node current = next;
             next = current.next(previous);
             previous = current;
-            if ( start.equals(next) ) break;
+            if (start.equals(next)) break;
             list.add(next);
         }
         return list;
     }
 
     private void requestExtension(Point point) {
-        if ( point != null && requestedPoint.add(point)) {
+        if (point != null && requestedPoint.add(point)) {
             synchronized (this) {
                 // ExtensionTask が待ちで寝ていたら起こす
                 if (requestQueue.isEmpty()) notifyAll();
-                for ( Point p : resolver.getNeighbors(point) ){
-                    if ( addedPoint.add(p) ) {
+                for (Point p : resolver.getNeighbors(point)) {
+                    if (addedPoint.add(p)) {
                         requestQueue.offer(p);
                     }
                 }
@@ -245,9 +255,9 @@ public class HighVoronoi {
         }
     }
 
-    private void addBoundary(Line self){
+    private void addBoundary(Line self) {
         Bisector boundary = new Bisector(self);
-        for ( Bisector preexist : bisectors ){
+        for (Bisector preexist : bisectors) {
             Point p = boundary.line.getIntersection(preexist.line);
             Intersection a = new Intersection(p, boundary);
             Intersection b = new Intersection(p, preexist);
@@ -264,7 +274,7 @@ public class HighVoronoi {
         Bisector bisector = new Bisector(point, Line.getPerpendicularBisector(point, center));
         for (Bisector preexist : bisectors) {
             Point p = bisector.line.getIntersection(preexist.line);
-            if ( p != null && container.containsPoint(p) ) {
+            if (p != null && container.containsPoint(p)) {
                 Intersection a = new Intersection(p, bisector, preexist.line);
                 Intersection b = new Intersection(p, preexist, bisector.line);
                 Node n = new Node(p, a, b);
@@ -284,20 +294,20 @@ public class HighVoronoi {
         static final int STEP_DOWN = -1;
         static final int STEP_ZERO = 0;
 
-        private Node(Point point, Intersection a, Intersection b){
+        private Node(Point point, Intersection a, Intersection b) {
             this.point = point;
             p1 = a;
             p2 = b;
             int cnt = 0;
-            if ( a.line.isBoundary ) cnt++;
-            if ( b.line.isBoundary ) cnt++;
-            if ( cnt == 0 ){
+            if (a.line.isBoundary) cnt++;
+            if (b.line.isBoundary) cnt++;
+            if (cnt == 0) {
                 onBoundary = false;
                 index = -1;
-            }else if ( cnt == 1 ){
+            } else if (cnt == 1) {
                 onBoundary = true;
                 index = -1;
-            }else{
+            } else {
                 onBoundary = false;
             }
         }
@@ -319,29 +329,30 @@ public class HighVoronoi {
 
         /**
          * 辿ってきた辺とは異なる線分上の隣接頂点でかつ辺のボロノイ次数が同じになる方を返す.
+         *
          * @param previous from which you are traversing
          * @return Voronoi-Index of Edge:previous=>this is same as that of Edge:this=>next
          */
-        Node next(Point previous){
-            if ( p1.hasNext() && p1.next().equals(previous) ){
+        Node next(Point previous) {
+            if (p1.hasNext() && p1.next().equals(previous)) {
                 return next(p1, p2, false, -p1.getStep());
-            }else if ( p1.hasPrevious() && p1.previous().equals(previous) ){
+            } else if (p1.hasPrevious() && p1.previous().equals(previous)) {
                 return next(p1, p2, true, p1.getStep());
-            }else if ( p2.hasNext() && p2.next().equals(previous) ){
+            } else if (p2.hasNext() && p2.next().equals(previous)) {
                 return next(p2, p1, false, -p2.getStep());
-            }else if ( p2.hasPrevious() && p2.previous().equals(previous) ){
+            } else if (p2.hasPrevious() && p2.previous().equals(previous)) {
                 return next(p2, p1, true, p2.getStep());
-            }else{
+            } else {
                 throw new NoSuchElementException("not found");
             }
         }
 
-        private Node next(Intersection current, Intersection other, boolean forward, int step){
-            if ( onBoundary && index > 0 ){
+        private Node next(Intersection current, Intersection other, boolean forward, int step) {
+            if (onBoundary && index > 0) {
                 // 頂点がFrame境界線上（Vertexではない）でかつ
                 // この頂点が解決済みなら無視して同じ境界線上のお隣さんへ辿る
                 return forward ? current.next().node : current.previous().node;
-            }else{
+            } else {
                 // 頂点がFrame内部なら step = Node.STEP_UP/DOWN　のいずれか
                 // FrameのVertexに位置する場合は例外的に step = Node.STEP_ZERO
                 return other.neighbor(-step).node;
@@ -353,25 +364,26 @@ public class HighVoronoi {
          * 下がるまたは変化しない方を返す.<br>
          * この頂点がFrame内部なら必ず次数が下がる隣接頂点を返すが、
          * Frame境界線のVertexに相当する場合は例外的に次数変化0の方向の頂点を返す
+         *
          * @param previous from which you are traversing
          * @return Not null
          */
         @NotNull
-        Node nextDown(Point previous){
+        Node nextDown(Point previous) {
             Intersection target = null;
-            if ( p1.isNeighbor(previous) ){
+            if (p1.isNeighbor(previous)) {
                 target = p2;
                 //return p2.neighbor(Node.STEP_DOWN).node;
-            }else if ( p2.isNeighbor(previous) ){
+            } else if (p2.isNeighbor(previous)) {
                 target = p1;
                 //return p1.neighbor(Node.STEP_DOWN).node;
             }
-            if ( target == null ) {
+            if (target == null) {
                 throw new NoSuchElementException("not found");
             }
-            if ( target.hasNeighbor(Node.STEP_DOWN) ){
+            if (target.hasNeighbor(Node.STEP_DOWN)) {
                 return target.neighbor(Node.STEP_DOWN).node;
-            }else{
+            } else {
                 return target.neighbor(Node.STEP_ZERO).node;
             }
         }
@@ -380,75 +392,76 @@ public class HighVoronoi {
          * この頂点から見てボロノイ次数が上がる方向の隣接頂点を返す<br>
          * 辿ってきた方向{@code previous => this}に対して異なる線分上、同じ線分上の順で探す。
          * それでも存在しない場合はNull
-         * @param previous　from which you are traversing
+         *
+         * @param previous from which you are traversing
          * @return Null if no such node
          */
         @Nullable
-        Node nextUp(Point previous){
+        Node nextUp(Point previous) {
             Intersection t1 = null;
             Intersection t2 = null;
-            if ( p1.isNeighbor(previous) ){
+            if (p1.isNeighbor(previous)) {
                 t1 = p2;
                 t2 = p1;
                 //return p2.neighbor(Node.STEP_UP).node;
-            }else if ( p2.isNeighbor(previous) ){
+            } else if (p2.isNeighbor(previous)) {
                 t1 = p1;
                 t2 = p2;
                 //return p1.neighbor(Node.STEP_UP).node;
             }
-            if ( t1 == null || t2 == null ) {
+            if (t1 == null || t2 == null) {
                 throw new NoSuchElementException("not found");
             }
-            if ( t1.hasNeighbor(Node.STEP_UP) ){
+            if (t1.hasNeighbor(Node.STEP_UP)) {
                 return t1.neighbor(Node.STEP_UP).node;
-            }else if ( t2.hasNeighbor(Node.STEP_UP) ){
+            } else if (t2.hasNeighbor(Node.STEP_UP)) {
                 return t2.neighbor(Node.STEP_UP).node;
             }
             return null;
         }
 
-        void onSolved(int level){
+        void onSolved(int level) {
             p1.onSolved();
             p2.onSolved();
-            if ( index < 0 ){
-                if ( p1.line.isBoundary || p2.line.isBoundary ){
+            if (index < 0) {
+                if (p1.line.isBoundary || p2.line.isBoundary) {
                     // フレーム上の頂点はn次以上のボロノイ図に登場する
                     index = level;
-                }else {
+                } else {
                     // フレーム内部の頂点はn,n+1次のボロノイ図にしか登場しない
                     index = level + 0.5f;
                 }
-            }else if ( Math.round(index) != index ){
+            } else if (Math.round(index) != index) {
                 // 整合性の確認
-                if ( index + 0.5f != level ) throw new RuntimeException("index mismatch");
+                if (index + 0.5f != level) throw new RuntimeException("index mismatch");
             }
         }
 
-        boolean hasSolved(){
+        boolean hasSolved() {
             return index >= 0f;
         }
 
-        void release(){
+        void release() {
             p1 = null;
             p2 = null;
         }
 
         @Override
-        public String toString(){
-            if ( index < 0 ){
+        public String toString() {
+            if (index < 0) {
                 return String.format("%s not solved", super.toString());
-            }else if ( index == 0 ){
+            } else if (index == 0) {
                 return String.format("%s Vertex", super.toString());
-            }else{
+            } else {
                 return String.format("%s %.1f", super.toString(), index);
             }
         }
 
     }
 
-    private class Intersection extends Point{
+    private class Intersection extends Point {
 
-        private Intersection(Point point, Bisector line, Line other){
+        private Intersection(Point point, Bisector line, Line other) {
             this.point = point;
             this.line = line;
 
@@ -462,7 +475,7 @@ public class HighVoronoi {
             this.step = other.onSameSide(p, center) ? Node.STEP_DOWN : Node.STEP_UP;
         }
 
-        private Intersection(Point point, Bisector line){
+        private Intersection(Point point, Bisector line) {
             this.point = point;
             this.line = line;
             this.step = Node.STEP_ZERO;
@@ -487,88 +500,88 @@ public class HighVoronoi {
         }
 
 
-        int getStep(){
+        int getStep() {
             return step;
         }
 
-        void insert(Intersection previous, Intersection next, int index){
+        void insert(Intersection previous, Intersection next, int index) {
             this.previous = previous;
             this.next = next;
-            if ( previous != null ) previous.next = this;
-            if ( next != null ){
+            if (previous != null) previous.next = this;
+            if (next != null) {
                 next.previous = this;
                 next.incrementIndex();
             }
             this.index = index;
         }
 
-        void incrementIndex(){
+        void incrementIndex() {
             index++;
-            if ( next != null ) next.incrementIndex();
+            if (next != null) next.incrementIndex();
         }
 
-        boolean hasPrevious(){
+        boolean hasPrevious() {
             return previous != null;
         }
 
-        boolean hasNext(){
+        boolean hasNext() {
             return next != null;
         }
 
-        boolean isNeighbor(Point p){
-            return ( hasNext() && next.equals(p) ) || ( hasPrevious() && previous.equals(p));
+        boolean isNeighbor(Point p) {
+            return (hasNext() && next.equals(p)) || (hasPrevious() && previous.equals(p));
         }
 
-        boolean hasNeighbor(int step){
-            if ( step == 0 && this.step == 0 ){
+        boolean hasNeighbor(int step) {
+            if (step == 0 && this.step == 0) {
                 return true;
-            }else if ( step != 0 && this.step != 0 ){
-                return ( step == this.step ) ? hasNext() : hasPrevious();
+            } else if (step != 0 && this.step != 0) {
+                return (step == this.step) ? hasNext() : hasPrevious();
             }
             return false;
         }
 
-        Intersection neighbor(int step){
-            if ( step == 0 && this.step == 0 ){
-                if ( hasPrevious() ) return previous;
-                if ( hasNext() ) return next;
-            }else if ( step != 0 && this.step != 0 ){
-                return ( step == this.step ) ? next() : previous();
+        Intersection neighbor(int step) {
+            if (step == 0 && this.step == 0) {
+                if (hasPrevious()) return previous;
+                if (hasNext()) return next;
+            } else if (step != 0 && this.step != 0) {
+                return (step == this.step) ? next() : previous();
             }
             throw new IllegalArgumentException("step invalid");
         }
 
-        Intersection next(){
-            if ( next == null ){
+        Intersection next() {
+            if (next == null) {
                 throw new NoSuchElementException();
             }
             return next;
         }
 
-        Intersection previous(){
-            if ( previous == null ){
+        Intersection previous() {
+            if (previous == null) {
                 throw new NoSuchElementException();
             }
             return previous;
         }
 
-        int getIndex(){
-            if ( index < 0 ) throw new IllegalStateException("index not set yet");
+        int getIndex() {
+            if (index < 0) throw new IllegalStateException("index not set yet");
             return index;
         }
 
-        void setIndex(int index){
+        void setIndex(int index) {
             this.index = index;
         }
 
-        void onSolved(){
+        void onSolved() {
             line.onIntersectionSolved(this);
         }
 
-        void release(){
+        void release() {
             previous = null;
             next = null;
-            if ( node == null ){
+            if (node == null) {
                 return;
             }
             node.release();
@@ -576,7 +589,7 @@ public class HighVoronoi {
         }
 
         @Override
-        public String toString(){
+        public String toString() {
             return String.format("%s %+d", super.toString(), step);
         }
 
@@ -584,7 +597,7 @@ public class HighVoronoi {
 
     private class Bisector {
 
-        private Bisector(Point point, Line line){
+        private Bisector(Point point, Line line) {
             this.delaunayPoint = point;
             this.line = line;
             intersections = new LinkedList<>();
@@ -599,7 +612,7 @@ public class HighVoronoi {
         }
 
         // special for boundary line
-        private Bisector(Line edge){
+        private Bisector(Line edge) {
             delaunayPoint = null;
             line = edge;
             isBoundary = true;
@@ -608,9 +621,9 @@ public class HighVoronoi {
             //addIntersection(new Intersection(edge.b, this));
         }
 
-        private void inspectBoundary(Edge boundary){
+        private void inspectBoundary(Edge boundary) {
             Point p = boundary.getIntersection(line);
-            if ( p != null ){
+            if (p != null) {
                 Intersection i = new Intersection(p, this, boundary.toLine());
                 addIntersection(i);
             }
@@ -624,7 +637,7 @@ public class HighVoronoi {
         final Line line;
         final boolean isBoundary;
 
-        synchronized void onIntersectionSolved(Intersection intersection){
+        synchronized void onIntersectionSolved(Intersection intersection) {
             int index = intersection.getIndex();
             solvedPointIndexFrom = Math.min(solvedPointIndexFrom, index);
             solvedPointIndexTo = Math.max(solvedPointIndexTo, index);
@@ -636,7 +649,7 @@ public class HighVoronoi {
             int index = addIntersection(intersection, 0, size);
 
             intersection.insert(
-                    index > 0 ? intersections.get(index-1) : null,
+                    index > 0 ? intersections.get(index - 1) : null,
                     index < size ? intersections.get(index) : null,
                     index
             );
@@ -668,8 +681,8 @@ public class HighVoronoi {
             }
         }
 
-        void release(){
-            for ( Intersection item : intersections ) item.release();
+        void release() {
+            for (Intersection item : intersections) item.release();
             intersections.clear();
             intersections = null;
         }

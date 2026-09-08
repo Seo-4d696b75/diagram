@@ -30,7 +30,6 @@ class Station(
     var next: MutableList<Int>? = null,
     var voronoi: VoronoiArea? = null,
 ) : Point() {
-
     constructor(raw: RawStation) : this(
         lat = raw.lat,
         lng = raw.lng,
@@ -42,35 +41,39 @@ class Station(
 
     override fun getY() = lat
 
-    override fun toString(): String {
-        return "$name($code)"
-    }
+    override fun toString(): String = "$name($code)"
 
-    fun toResult() = Result.Station(
-        lat = lat,
-        lng = lng,
-        code = code,
-        name = name,
-        right = right,
-        left = left,
-        next = requireNotNull(next),
-        voronoi = requireNotNull(voronoi).let { area ->
-            val geometry = if (area.enclosed) {
-                VoronoiGeometry.Polygon(
-                    coordinates = listOf(
-                        area.points.toMutableList().also { list ->
-                            list.add(list.first())
-                        }.map { it.toGeoJSON() },
-                    ),
-                )
-            } else {
-                VoronoiGeometry.LineString(
-                    coordinates = area.points.map { it.toGeoJSON() },
-                )
-            }
-            VoronoiFeature(geometry = geometry)
-        },
-    )
+    fun toResult() =
+        Result.Station(
+            lat = lat,
+            lng = lng,
+            code = code,
+            name = name,
+            right = right,
+            left = left,
+            next = requireNotNull(next),
+            voronoi =
+                requireNotNull(voronoi).let { area ->
+                    val geometry =
+                        if (area.enclosed) {
+                            VoronoiGeometry.Polygon(
+                                coordinates =
+                                    listOf(
+                                        area.points
+                                            .toMutableList()
+                                            .also { list ->
+                                                list.add(list.first())
+                                            }.map { it.toGeoJSON() },
+                                    ),
+                            )
+                        } else {
+                            VoronoiGeometry.LineString(
+                                coordinates = area.points.map { it.toGeoJSON() },
+                            )
+                        }
+                    VoronoiFeature(geometry = geometry)
+                },
+        )
 }
 
 private fun Double.toFixed(digit: Int = 6): Double {

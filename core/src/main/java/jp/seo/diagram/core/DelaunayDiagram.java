@@ -1,9 +1,19 @@
 package jp.seo.diagram.core;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 
 /**
  * ドロネー図を制作するクラス
+ *
  * @author Seo-4d696b75
  * @version 2018/05/13
  */
@@ -14,9 +24,10 @@ public class DelaunayDiagram {
 
     /**
      * 分割する母点集合を指定してインスタンス化
+     *
      * @param points Setで重複をチェックする
      */
-    public DelaunayDiagram(Collection<? extends Point> points){
+    public DelaunayDiagram(Collection<? extends Point> points) {
         this.points = new HashSet<>();
         this.points.addAll(points);
     }
@@ -32,48 +43,53 @@ public class DelaunayDiagram {
 
     /**
      * {@link DelaunayDiagram#DelaunayDiagram(Collection)}で指定した母点集合
+     *
      * @return 重複のない点の集合
      */
-    protected Set<Point> getPoints(){
+    protected Set<Point> getPoints() {
         return points;
     }
 
     /**
      * 分割された三角形の集合.
+     *
      * @return Null if {@link #split(Rectangle)} not called yet
      */
-    public Set<Triangle> getTriangles(){
+    public Set<Triangle> getTriangles() {
         return solvedTriangle;
     }
 
     /**
      * 分割された三角形の辺の集合
+     *
      * @return Null if {@link #split(Rectangle)} not called yet
      */
-    public Set<Edge> getEdges(){
+    public Set<Edge> getEdges() {
         return solvedEdge;
     }
 
     /**
      * {@link #getEdges()}の辺に対しその辺を共有する三角形の組のマッピング
+     *
      * @return Null if {@link #split(Rectangle)} not called yet
      */
-    public Map<Edge, TrianglePair> getEdgeTriangleMap(){
+    public Map<Edge, TrianglePair> getEdgeTriangleMap() {
         return solvedPair;
     }
 
     /**
      * ひとつの辺を共有する二つの三角形のペアを表します
      */
-    public static class TrianglePair{
-        private TrianglePair(Edge edge, Point point1, Point point2){
+    public static class TrianglePair {
+        private TrianglePair(Edge edge, Point point1, Point point2) {
             t1 = new Triangle(edge.a, edge.b, point1);
             t2 = new Triangle(edge.a, edge.b, point2);
             this.point1 = point1;
             this.point2 = point2;
             this.edge = edge;
         }
-        private TrianglePair(Edge edge, Point point){
+
+        private TrianglePair(Edge edge, Point point) {
             t1 = new Triangle(edge, point);
             t2 = null;
             point1 = point;
@@ -81,28 +97,32 @@ public class DelaunayDiagram {
             this.edge = edge;
         }
 
-        private Triangle t1,t2;
-        private Point point1,point2;
+        private Triangle t1, t2;
+        private Point point1, point2;
         private Edge edge;
 
-        public Edge getEdge(){
+        public Edge getEdge() {
             return edge;
         }
 
-        Triangle getTriangle1(){
+        Triangle getTriangle1() {
             return t1;
         }
 
-        Triangle getTriangle2(){
+        Triangle getTriangle2() {
             return t2;
         }
 
-        Point getPoint1(){return point1;}
+        Point getPoint1() {
+            return point1;
+        }
 
-        Point getPoint2(){return point2;}
+        Point getPoint2() {
+            return point2;
+        }
 
-        private void replace(Point change){
-            if ( t2 == null ){
+        private void replace(Point change) {
+            if (t2 == null) {
                 t2 = new Triangle(edge, change);
                 return;
             }
@@ -114,28 +134,28 @@ public class DelaunayDiagram {
             double aqy = change.getY() - edge.a.getY();
             double bqx = change.getX() - edge.b.getX();
             double bqy = change.getY() - edge.b.getY();
-            if ( (apx*bpy - apy*bpx) * (aqx*bqy - aqy*bqx) > 0 ){
+            if ((apx * bpy - apy * bpx) * (aqx * bqy - aqy * bqx) > 0) {
                 t1 = new Triangle(edge, change);
                 point1 = change;
-            }else{
+            } else {
                 t2 = new Triangle(edge, change);
                 point2 = change;
             }
         }
 
-        private void removeBoundary(Triangle container){
-            if ( container.isVertex(point1) ){
+        private void removeBoundary(Triangle container) {
+            if (container.isVertex(point1)) {
                 point1 = point2;
                 t1 = t2;
                 point2 = null;
                 t2 = null;
-            }else if ( point2 != null && container.isVertex(point2) ){
+            } else if (point2 != null && container.isVertex(point2)) {
                 point2 = null;
                 t2 = null;
             }
         }
 
-        private boolean isFlip(){
+        private boolean isFlip() {
             return point2 != null && t1.getCircumscribed().containsPoint(point2);
         }
 
@@ -144,7 +164,7 @@ public class DelaunayDiagram {
          * 現在：this.edge を共有する2つの三角形 edge-point1, edge-point2
          * => 操作後： 辺point1-point2を共有する2つ三角形
          */
-        private void flip(){
+        private void flip() {
             Edge old = this.edge;
             this.edge = new Edge(point1, point2);
             point1 = old.a;
@@ -156,9 +176,10 @@ public class DelaunayDiagram {
 
     /**
      * ドロネー図分割を計算
+     *
      * @param border すべての母点を内部に含むような矩形
      */
-    public void split(Rectangle border){
+    public void split(Rectangle border) {
         long time = System.currentTimeMillis();
 
         // すべての点を内部に含む三角形を適当に設定
@@ -181,16 +202,14 @@ public class DelaunayDiagram {
         // 点を三角形内部に逐次的に追加していく
         int size = points.size();
         int cnt = 0;
-        for ( Point point : points ){
+        for (Point point : points) {
             Triangle t = getContainer(point);
-            if ( t == null ){
+            if (t == null) {
                 throw new IllegalArgumentException("point outside border Rectangle");
             }
             addPoint(point, t);
-            System.out.print(String.format(Locale.US,"\r%.2f%% complete  ", (double)cnt++ *100 / size));
+            System.out.print(String.format(Locale.US, "\r%.2f%% complete  ", (double) cnt++ * 100 / size));
         }
-
-
 
 
         // 最初に適当に設定した外郭の三角形と頂点を共有するものを取り除く
@@ -201,9 +220,9 @@ public class DelaunayDiagram {
             Triangle next = iterator.next();
             if ( outside(next, container, frameBuilder) ) iterator.remove();
         }*/
-        triangles.removeIf( next -> outside(next, container, frameBuilder));
+        triangles.removeIf(next -> outside(next, container, frameBuilder));
 
-        if ( !frameBuilder.isClosed() ){
+        if (!frameBuilder.isClosed()) {
             throw new RuntimeException("fail to calc frame");
         }
         Polygon frame = frameBuilder.build();
@@ -214,21 +233,21 @@ public class DelaunayDiagram {
 
         //=======改良ポイント==================================
         // すべての点を内包する多角形が凸形になるように調整する
-        Point previous = list.get(length-1);
+        Point previous = list.get(length - 1);
         List<Point> newList = new LinkedList<>();
-        for ( int i=0 ; i<length ; i++ ){
+        for (int i = 0; i < length; i++) {
             Point current = list.get(i);
-            Point next = list.get((i+1)%length);
+            Point next = list.get((i + 1) % length);
             double ax = current.getX() - previous.getX();
             double ay = current.getY() - previous.getY();
             double bx = next.getX() - current.getX();
             double by = next.getY() - current.getY();
-            double cross = ax*by - ay*bx;
-            if ( cross > 0 ){
+            double cross = ax * by - ay * bx;
+            if (cross > 0) {
                 // 凸
                 newList.add(current);
                 previous = current;
-            }else{
+            } else {
                 // 凹
                 addPointOutside(previous, current, next);
             }
@@ -237,7 +256,7 @@ public class DelaunayDiagram {
         //===================================================
 
         System.out.println("outline solved.");
-        for ( Point point : list){
+        for (Point point : list) {
             System.out.println(point.toString());
         }
 
@@ -245,16 +264,16 @@ public class DelaunayDiagram {
         solvedTriangle = triangles;
 
         solvedEdge = new HashSet<>();
-        for ( Triangle item : solvedTriangle ){
+        for (Triangle item : solvedTriangle) {
             solvedEdge.add(new Edge(item.a, item.b));
             solvedEdge.add(new Edge(item.b, item.c));
             solvedEdge.add(new Edge(item.c, item.a));
         }
 
         solvedPair = new HashMap<>();
-        for ( Edge edge : solvedEdge ){
+        for (Edge edge : solvedEdge) {
             TrianglePair pair = trianglePairs.get(edge);
-            if ( pair == null ) throw new NullPointerException();
+            if (pair == null) throw new NullPointerException();
             pair.removeBoundary(container);
             solvedPair.put(edge, pair);
         }
@@ -265,7 +284,7 @@ public class DelaunayDiagram {
         System.out.println("time:" + (System.currentTimeMillis() - time) + "ms");
     }
 
-    private boolean outside(Triangle next, Triangle container, Polygon.Builder frameBuilder){
+    private boolean outside(Triangle next, Triangle container, Polygon.Builder frameBuilder) {
         /*
         boolean a = next.isVertex(container.a);
         boolean b = next.isVertex(container.b);
@@ -274,22 +293,22 @@ public class DelaunayDiagram {
         int out = 0;
         Point[] inside = new Point[3];
         Point[] outside = new Point[3];
-        if ( next.isVertex(container.a) ){
+        if (next.isVertex(container.a)) {
             outside[out++] = container.a;
-        }else{
+        } else {
             inside[in++] = container.a;
         }
-        if ( next.isVertex(container.b) ){
+        if (next.isVertex(container.b)) {
             outside[out++] = container.b;
-        }else{
+        } else {
             inside[in++] = container.b;
         }
-        if ( next.isVertex(container.c) ){
+        if (next.isVertex(container.c)) {
             outside[out++] = container.c;
-        }else{
+        } else {
             inside[in++] = container.c;
         }
-        if ( out == 1 ){
+        if (out == 1) {
             frameBuilder.append(next.getOppositeSize(outside[0]));
             //trianglePairs.remove(new Edge(outside[0], inside[0]));
             //trianglePairs.remove(new Edge(outside[0], inside[1]));
@@ -300,24 +319,24 @@ public class DelaunayDiagram {
             if ( c ) frameBuilder.append(next.getOppositeSize(container.c));*/
 
             return true;
-        }else if ( out == 2 ){
+        } else if (out == 2) {
             // 一番外側の三角形
             //trianglePairs.remove(new Edge(outside[1], inside[0]));
             //trianglePairs.remove(new Edge(outside[0], inside[0]));
             //trianglePairs.remove(new Edge(outside[0], outside[1]));
             return true;
-        }else{
+        } else {
             return false;
         }
     }
 
-    private void normalizeDirection(List<Point> list){
+    private void normalizeDirection(List<Point> list) {
         final int length = list.size();
         double sum = 0.0;
-        for ( int i=0 ; i<length ; i++ ){
-            Point previous = list.get((i-1+length)%length);
+        for (int i = 0; i < length; i++) {
+            Point previous = list.get((i - 1 + length) % length);
             Point current = list.get(i);
-            Point next = list.get((i+1)%length);
+            Point next = list.get((i + 1) % length);
             double ax = current.getX() - previous.getX();
             double ay = current.getY() - previous.getY();
             double bx = next.getX() - current.getX();
@@ -331,7 +350,7 @@ public class DelaunayDiagram {
             sum += argument;
         }
         // sum = ±2π
-        if ( sum < 0 ){
+        if (sum < 0) {
             Collections.reverse(list);
         }
     }
@@ -339,31 +358,32 @@ public class DelaunayDiagram {
     /**
      * 2ベクトルA(ax,ay),B(bx,by)のなす角をラジアンで返す.
      * AからBへ右手系の向きで見た符号つき
+     *
      * @return {@code (-π,+π)}
      */
-    private double measureArgument(double ax, double ay, double bx, double by){
+    private double measureArgument(double ax, double ay, double bx, double by) {
         double v1 = ax * by - ay * bx;
         double v2 = ax * bx + ay * by;
-        if ( v2 == 0 ){
-            return v1 > 0 ? Math.PI/2 : -Math.PI/2;
-        }else if ( v2 > 0 ){
-            return Math.atan(v1/v2);
-        }else{
-            double v3 = Math.atan(v1/v2);
+        if (v2 == 0) {
+            return v1 > 0 ? Math.PI / 2 : -Math.PI / 2;
+        } else if (v2 > 0) {
+            return Math.atan(v1 / v2);
+        } else {
+            double v3 = Math.atan(v1 / v2);
             return v3 > 0 ? v3 - Math.PI : v3 + Math.PI;
         }
     }
 
-    private Triangle getContainer(Point point){
-        for ( Triangle item : triangles ){
-            if ( item.containsPoint(point) ){
+    private Triangle getContainer(Point point) {
+        for (Triangle item : triangles) {
+            if (item.containsPoint(point)) {
                 return item;
             }
         }
         return null;
     }
 
-    private void addPointOutside(Point a, Point b, Point c){
+    private void addPointOutside(Point a, Point b, Point c) {
         edges.clear();
 
         Edge ab = new Edge(a, b);
@@ -380,11 +400,11 @@ public class DelaunayDiagram {
         resolveDelaunay();
     }
 
-    private void resolveDelaunay(){
-        while( !edges.isEmpty() ){
+    private void resolveDelaunay() {
+        while (!edges.isEmpty()) {
             Edge edge = edges.poll();
             TrianglePair pair = trianglePairs.get(edge);
-            if ( pair.isFlip() ){
+            if (pair.isFlip()) {
                 trianglePairs.remove(edge);
                 triangles.remove(pair.t1);
                 triangles.remove(pair.t2);
@@ -408,20 +428,20 @@ public class DelaunayDiagram {
         }
     }
 
-    private void addPoint(Point p, Triangle t){
+    private void addPoint(Point p, Triangle t) {
 
         edges.clear();
 
-        if ( t.isVertex(p) ){
+        if (t.isVertex(p)) {
             //頂点に一致する場合はnothing to do
             return;
-        }else if ( Edge.onEdge(t.a, t.b, p) ){
+        } else if (Edge.onEdge(t.a, t.b, p)) {
             addOnEdge(t.a, t.b, t.c, p);
-        }else if ( Edge.onEdge(t.b, t.c, p) ){
+        } else if (Edge.onEdge(t.b, t.c, p)) {
             addOnEdge(t.b, t.c, t.a, p);
-        }else if ( Edge.onEdge(t.c, t.a, p) ){
+        } else if (Edge.onEdge(t.c, t.a, p)) {
             addOnEdge(t.c, t.a, t.b, p);
-        }else{
+        } else {
             addInTriangle(p, t);
         }
 
@@ -430,7 +450,7 @@ public class DelaunayDiagram {
     }
 
     //△ABCの辺AB上に点P
-    private void addOnEdge(Point a, Point b, Point c, Point p){
+    private void addOnEdge(Point a, Point b, Point c, Point p) {
         Edge old = new Edge(a, b);
         TrianglePair pair = trianglePairs.remove(old);
         Point d = new Line(old).onSameSide(p, pair.point1) ? pair.point2 : pair.point1;
@@ -466,7 +486,7 @@ public class DelaunayDiagram {
         edges.offer(bd);
     }
 
-    private void addInTriangle(Point p, Triangle t){
+    private void addInTriangle(Point p, Triangle t) {
 
         triangles.remove(t);
         Edge ab = new Edge(t.a, t.b);
@@ -492,7 +512,6 @@ public class DelaunayDiagram {
         edges.offer(bc);
         edges.offer(ca);
     }
-
 
 
 }
