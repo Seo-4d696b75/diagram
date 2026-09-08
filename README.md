@@ -4,7 +4,15 @@
 [ドロネー図・ボロノイ図の描画アルゴリズムの説明](https://qiita.com/Seo-4d696b75/items/c088f5b853010507224c)
 
 [![Maven version](https://img.shields.io/maven-central/v/com.seo4d696b75.diagram/core)](https://central.sonatype.com/artifact/com.seo4d696b75.diagram/core)
-![License MIT](https://img.shields.io/badge/Apache_2.0-9E9F9F?label=License)
+![License MIT](https://img.shields.io/badge/Apache_2.0-9E9F9F?label=License)]
+
+> [!IMPORTANT]
+> バージョン により公開方式が異なります
+
+| バージョン | repository | groupId | artifactId | 
+|-|-|-|-|
+| 0.2.x 以前 | GitHub Packages | com.github.seo4d696b75 | diagram |
+| 0.3.0 以降 | Maven Central | com.seo4d696b75.diagram | core, station |
 
 ## 利用方法
 
