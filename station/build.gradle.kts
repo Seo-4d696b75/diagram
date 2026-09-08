@@ -24,7 +24,7 @@ mavenPublishing {
 
     coordinates(
         groupId = "com.seo4d696b75.diagram",
-        artifactId = "tool-station",
+        artifactId = "station",
         version = libs.versions.publish.get(),
     )
 

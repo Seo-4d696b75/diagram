@@ -18,6 +18,6 @@ kotlin {
 tasks.register<Task>("publish") {
     dependsOn(
         "core:publishToMavenCentral",
-        "app:publishToMavenCentral",
+        "station:publishToMavenCentral",
     )
 }

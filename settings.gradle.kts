@@ -1,5 +1,5 @@
 rootProject.name = "diagram"
-include(":app")
+include(":station")
 include(":core")
 
 pluginManagement {
