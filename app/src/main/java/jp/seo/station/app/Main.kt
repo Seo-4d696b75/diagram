@@ -4,14 +4,21 @@ import jp.seo.diagram.core.KdTree
 import jp.seo.diagram.core.KdTree.Node
 import jp.seo.diagram.core.Rectangle
 import jp.seo.diagram.core.VoronoiDiagram
-import jp.seo.station.app.data.RawStation
 import jp.seo.station.app.data.Result
 import jp.seo.station.app.data.Station
+import jp.seo.station.app.data.StationPoint
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
 
+/**
+ * 駅座標点集合のドロネー・ボロノイ分割と Kd-tree 構造を計算する
+ *
+ * @param args 入力・出力のファイルパス２つ
+ * 1. 入力 [Station]のリスト相当のJSONファイルのパス
+ * 2. 出力 [Result]のJSONファイルを書き出すパス
+ */
 fun main(args: Array<String>) {
     require(args.size >= 2)
     calc(args[0], args[1])
@@ -29,14 +36,14 @@ private fun calc(
             explicitNulls = false
         }
     val src = File(srcFile).readText()
-    val input = json.decodeFromString(ListSerializer(RawStation.serializer()), src)
+    val input = json.decodeFromString(ListSerializer(Station.serializer()), src)
     val result = input.calc()
     val dst = json.encodeToString(Result.serializer(), result)
     File(dstFile).writeText(dst)
 }
 
-internal fun List<RawStation>.calc(): Result {
-    val stations = map(::Station)
+internal fun List<Station>.calc(): Result {
+    val stations = map(::StationPoint)
     println("station size: ${stations.size}")
     val diagram = VoronoiDiagram(stations)
     diagram.split(Rectangle(112.0, 60.0, 160.0, 20.0))
@@ -49,8 +56,8 @@ internal fun List<RawStation>.calc(): Result {
     diagram.delaunayEdges.forEach {
         val s1 = it.a
         val s2 = it.b
-        if (s1 !is Station) throw ClassCastException()
-        if (s2 !is Station) throw ClassCastException()
+        if (s1 !is StationPoint) throw ClassCastException()
+        if (s2 !is StationPoint) throw ClassCastException()
         s1.next?.add(s2.code)
         s2.next?.add(s1.code)
     }
@@ -61,11 +68,11 @@ internal fun List<RawStation>.calc(): Result {
 
     return Result(
         root = tree.root.point.code,
-        nodes = stations.map(Station::toResult),
+        nodes = stations.map(StationPoint::toResult),
     )
 }
 
-private fun Node<Station>.traverseTree() {
+private fun Node<StationPoint>.traverseTree() {
     leftChild?.let { left ->
         point.left = left.point.code
         left.traverseTree()

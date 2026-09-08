@@ -7,10 +7,13 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * json input model
+ * 入力の駅座標点モデル
+ *
+ * 座標点のリストがJSON形式で入力される。
+ * 座標 [lat], [lng] はいずれも10進小数のオイラー角。
  */
 @Serializable
-data class RawStation(
+data class Station(
     val lat: Double,
     val lng: Double,
     val code: Int,
@@ -20,7 +23,7 @@ data class RawStation(
 /**
  * data model while calculating (mutable)
  */
-class Station(
+internal class StationPoint(
     val lat: Double,
     val lng: Double,
     val code: Int,
@@ -30,7 +33,7 @@ class Station(
     var next: MutableList<Int>? = null,
     var voronoi: VoronoiArea? = null,
 ) : Point() {
-    constructor(raw: RawStation) : this(
+    constructor(raw: Station) : this(
         lat = raw.lat,
         lng = raw.lng,
         code = raw.code,

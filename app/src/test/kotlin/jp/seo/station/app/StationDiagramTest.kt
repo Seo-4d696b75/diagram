@@ -1,7 +1,7 @@
 package jp.seo.station.app
 
-import jp.seo.station.app.data.RawStation
 import jp.seo.station.app.data.Result
+import jp.seo.station.app.data.Station
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,7 +20,7 @@ class StationDiagramTest {
     @Test
     fun calcMatchesDiagramJson() {
         val src = readResource("station.json")
-        val stations = json.decodeFromString<List<RawStation>>(src)
+        val stations = json.decodeFromString<List<Station>>(src)
         val actual = stations.calc()
 
         val dst = readResource("diagram.json")
