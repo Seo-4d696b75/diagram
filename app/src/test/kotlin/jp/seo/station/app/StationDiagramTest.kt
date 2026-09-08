@@ -21,7 +21,7 @@ class StationDiagramTest {
     fun calcMatchesDiagramJson() {
         val src = readResource("station.json")
         val stations = json.decodeFromString<List<Station>>(src)
-        val actual = stations.calc()
+        val actual = stations.calculateDiagram()
 
         val dst = readResource("diagram.json")
         val expected = json.decodeFromString<Result>(dst)

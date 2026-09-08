@@ -1,12 +1,8 @@
 plugins {
-    id("application")
+    id("java-library")
     alias(libs.plugins.publish)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
-}
-
-application {
-    mainClass.set("jp.seo.station.app.MainKt")
 }
 
 dependencies {

@@ -15,17 +15,12 @@ import java.io.File
 /**
  * 駅座標点集合のドロネー・ボロノイ分割と Kd-tree 構造を計算する
  *
- * @param args 入力・出力のファイルパス２つ
- * 1. 入力 [Station]のリスト相当のJSONファイルのパス
- * 2. 出力 [Result]のJSONファイルを書き出すパス
+ * @param srcFile [Station] のリストに相当するJSONファイルのパス
+ * @param dstFile [Result] のJSONファイルを書き出すパス
  */
-fun main(args: Array<String>) {
-    require(args.size >= 2)
-    calc(args[0], args[1])
-}
-
+@Suppress("unused")
 @OptIn(ExperimentalSerializationApi::class)
-private fun calc(
+fun calculateStationDiagram(
     srcFile: String,
     dstFile: String,
 ) {
@@ -37,12 +32,15 @@ private fun calc(
         }
     val src = File(srcFile).readText()
     val input = json.decodeFromString(ListSerializer(Station.serializer()), src)
-    val result = input.calc()
+    val result = input.calculateDiagram()
     val dst = json.encodeToString(Result.serializer(), result)
     File(dstFile).writeText(dst)
 }
 
-internal fun List<Station>.calc(): Result {
+/**
+ * 駅座標点集合のドロネー・ボロノイ分割と Kd-tree 構造を計算する
+ */
+fun List<Station>.calculateDiagram(): Result {
     val stations = map(::StationPoint)
     println("station size: ${stations.size}")
     val diagram = VoronoiDiagram(stations)
