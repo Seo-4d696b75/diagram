@@ -80,7 +80,7 @@ public class HighVoronoi {
         this.center = center;
         this.resolver = resolver;
 
-        Setting.error = Math.pow(10, -10);
+        Setting.error = Math.pow(2, -30);
 
         long time = System.currentTimeMillis();
 
