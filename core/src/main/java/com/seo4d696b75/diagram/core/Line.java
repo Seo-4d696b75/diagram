@@ -115,10 +115,14 @@ public class Line {
         if (Setting.isZero(det)) {
             return null;
         } else {
-            return new BasePoint(
-                    (b * line.c - line.b * c) / det,
-                    (line.a * c - a * line.c) / det
-            );
+            double x = (b * line.c - line.b * c) / det;
+            double y = (line.a * c - a * line.c) / det;
+            // 線分が完全にx,y軸平行な場合でも浮動小数点演算の結果が微妙にズレる
+            if (this.b == 0) x = -this.c;
+            if (line.b == 0) x = -line.c;
+            if (this.a == 0) y = -this.c;
+            if (line.a == 0) y = -line.c;
+            return new BasePoint(x, y);
         }
     }
 

@@ -21,6 +21,24 @@ data class Station(
 )
 
 /**
+ * 高次ボロノイ分割の計算に必要な駅座標点モデル
+ *
+ * 通常のモデル [Station] とは異なり、隣接点 [next] の情報が追加で必要です。
+ */
+@Serializable
+data class HighVoronoiStation(
+    val lat: Double,
+    val lng: Double,
+    val code: Int,
+    val name: String,
+
+    /**
+     * @see Result.Station.next
+     */
+    val next: List<Int>,
+)
+
+/**
  * data model while calculating (mutable)
  */
 internal class StationPoint(
@@ -59,7 +77,7 @@ internal class StationPoint(
                 requireNotNull(voronoi).let { area ->
                     val geometry =
                         if (area.enclosed) {
-                            VoronoiGeometry.Polygon(
+                            GeoJsonGeometry.Polygon(
                                 coordinates =
                                     listOf(
                                         area.points
@@ -70,11 +88,11 @@ internal class StationPoint(
                                     ),
                             )
                         } else {
-                            VoronoiGeometry.LineString(
+                            GeoJsonGeometry.LineString(
                                 coordinates = area.points.map { it.toGeoJSON() },
                             )
                         }
-                    VoronoiFeature(geometry = geometry)
+                    GeoJsonFeature(geometry = geometry)
                 },
         )
 }
@@ -85,4 +103,4 @@ private fun Double.toFixed(digit: Int = 6): Double {
     return (this * scale).roundToInt() / scale
 }
 
-private fun Point.toGeoJSON(): List<Double> = listOf(x.toFixed(), y.toFixed())
+internal fun Point.toGeoJSON(): List<Double> = listOf(x.toFixed(), y.toFixed())
