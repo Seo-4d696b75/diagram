@@ -35,6 +35,6 @@ data class Result(
         /**
          * この駅座標点のボロノイ分割領域
          */
-        var voronoi: GeoJsonFeature,
+        var voronoi: GeoJsonFeature<GeoJsonGeometry.Voronoi>,
     )
 }

@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonElement
  * [GeoJSON](https://geojson.org/) の Feature オブジェクト
  */
 @Serializable
-data class GeoJsonFeature(
+data class GeoJsonFeature<out T: GeoJsonGeometry>(
     val type: String = "Feature",
-    val geometry: GeoJsonGeometry,
+    val geometry: T,
     val properties: Map<String, JsonElement> = emptyMap(),
 )
 
@@ -20,6 +20,12 @@ data class GeoJsonFeature(
 @Serializable
 sealed interface GeoJsonGeometry {
     val coordinates: List<*>
+
+    /**
+     * ボロノイ分割の図形 "Polygon" もしくは "LineString"
+     */
+    @Serializable
+    sealed interface Voronoi : GeoJsonGeometry
 
     /**
      * ポリゴンの図形データ
@@ -56,7 +62,7 @@ sealed interface GeoJsonGeometry {
          * - `coordinates[0][i][1]`: 緯度
          */
         override val coordinates: List<List<List<Double>>>,
-    ) : GeoJsonGeometry
+    ) : GeoJsonGeometry, Voronoi
 
     /**
      * 点と点を順に繋いだポリライン
@@ -73,5 +79,22 @@ sealed interface GeoJsonGeometry {
          * - `coordinates[i][1]`: 緯度
          */
         override val coordinates: List<List<Double>>,
+    ) : GeoJsonGeometry, Voronoi
+
+    /**
+     * 複数のポリゴン集合
+     *
+     * `coordinates[i]` が`i`番目のポリゴンを表現します。
+     */
+    @Serializable
+    @SerialName("MultiPolygon")
+    data class MultiPolygon(
+        /**
+         * 各ポリゴンの座標点
+         *
+         * - `coordinates[i][0][j][0]`: 経度
+         * - `coordinates[i][0][j][1]`: 緯度
+         */
+        override val coordinates: List<List<List<List<Double>>>>,
     ) : GeoJsonGeometry
 }
