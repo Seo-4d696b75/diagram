@@ -1,693 +1,660 @@
-package com.seo4d696b75.diagram.core;
+package com.seo4d696b75.diagram.core
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Queue;
-import java.util.Set;
+import java.util.LinkedList
+import java.util.Queue
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 /**
  * ドロネー図における母点を結ぶ線分の垂直二等分線は互いに交差し、その交点によって二等分線は分割される.
  * その交点をNode、交点によって分割されてできた線分を辺Edgeにもつグラフ構造を考える
- *
+ * 
  * @author Seo-4d696b75
  * @version 2019/06/12
  */
-public class HighVoronoi {
-
+class HighVoronoi(
     /**
-     * 高次ボロノイ図を解決するうえで必要となる頂点を提供する. <br>
-     * ボロノイ図の双対図であるドロネー図が解決済みであると仮定して以下のように頂点の隣接関係を定義する.<br>
-     * <strong> 隣接する点 = ドロネー図の各辺における両端点 </strong>
+     * 分割する母点をすべて内部に含む三角形
      */
-    public interface PointProvider {
-
+    private val container: Triangle,
+) {
+    /**
+     * 高次ボロノイ図を解決するうえで必要となる頂点を提供する.
+     *
+     * ボロノイ図の双対図であるドロネー図が解決済みであると仮定して以下のように頂点の隣接関係を定義する.
+     *
+     * **隣接する点 = ドロネー図の各辺における両端点**
+     */
+    fun interface PointProvider {
         /**
-         * 指定された点に隣接する頂点集合を返す.
-         * 条件を満たす要素がない場合は空のリストを返す.<br>
+         * 指定された点に隣接する頂点集合を返す
          *
-         * @param point Non Null
-         * @return Non Null
+         * @param point 現在の点
+         * @return 隣接点の集合。条件を満たす要素がない場合は空のリスト。
          */
-        Collection<Point> getNeighbors(Point point);
-
+        fun getNeighbors(point: Point): Iterable<Point>
     }
 
-    public interface ResultCallback {
+    interface ResultCallback {
         /**
          * 各n次ボロノイ図が計算されると順次呼ばれる
-         *
-         * @param index  次数-1 [0,({@link HighVoronoi#solve(int, Point, PointProvider, ResultCallback)  指定した値}-1)]
+         * 
+         * @param index  0始まりでカウントした次数 `[0,level)`
          * @param points 閉じた多角形
          */
-        void onResolved(int index, Polygon points, long time);
+        fun onResolved(index: Int, points: Polygon, milliseconds: Long)
 
-        void onCompleted(Polygon[] results, long time);
+        fun onCompleted(results: List<Polygon>, milliseconds: Long)
     }
 
-    /**
-     *
-     * @param frame 分割する母点をすべて内部に含む三角形
-     */
-    public HighVoronoi(Triangle frame) {
-        container = frame;
-    }
-
-    private Point center;
-    private List<Bisector> bisectors;
-    private Triangle container;
-    private PointProvider resolver;
-    private Set<Point> requestedPoint;
-    private Set<Point> addedPoint;
-    private Queue<Point> requestQueue;
-    private boolean extensionRunning, traverseRunning;
+    private lateinit var center: Point
+    private lateinit var bisectors: MutableList<Bisector>
+    private lateinit var provider: PointProvider
+    private lateinit var requestedPoint: MutableSet<Point>
+    private lateinit var addedPoint: MutableSet<Point>
+    private lateinit var requestQueue: Queue<Point>
+    private var extensionRunning = false
+    private var traverseRunning = false
 
     /**
      * 計算する
-     *
+     * 
      * @param level    [1,level]の次数に関して計算する
      * @param center   目的の中心点
-     * @param resolver 隣接頂点を定義するオブジェクト
+     * @param provider 隣接頂点を定義するオブジェクト
      * @param callback 各次数で計算が終わる度にコールされる
      * @return [1,level]の次数で計算された多角形の配列, [index-1]のポリゴンがindex次の解
      */
-    public Polygon[] solve(int level, Point center, PointProvider resolver, ResultCallback callback) {
-        this.center = center;
-        this.resolver = resolver;
+    fun solve(
+        level: Int,
+        center: Point,
+        provider: PointProvider,
+        callback: ResultCallback? = null,
+    ): List<Polygon> {
+        this.center = center
+        this.provider = provider
 
-        Setting.error = Math.pow(2, -30);
+        Setting.error = 2.0.pow(-30.0)
 
-        long time = System.currentTimeMillis();
+        val time = System.currentTimeMillis()
 
-        Polygon[] result = new Polygon[level];
-        bisectors = new LinkedList<>();
+        val result = mutableListOf<Polygon>()
+        bisectors = mutableListOf()
 
-        addBoundary(new Line(container.a, container.b));
-        addBoundary(new Line(container.b, container.c));
-        addBoundary(new Line(container.c, container.a));
+        addBoundary(Line(container.a, container.b))
+        addBoundary(Line(container.b, container.c))
+        addBoundary(Line(container.c, container.a))
 
-        addedPoint = new HashSet<>();
-        requestedPoint = new HashSet<>();
-        requestQueue = new LinkedList<>();
+        addedPoint = mutableSetOf(center)
+        requestedPoint = mutableSetOf(center)
+        requestQueue = LinkedList()
 
-        addedPoint.add(center);
-        requestedPoint.add(center);
-        for (Point point : resolver.getNeighbors(center)) {
-            addedPoint.add(point);
-            addBisector(point);
+
+        for (point in provider.getNeighbors(center)) {
+            addedPoint.add(point)
+            addBisector(point)
         }
 
-        List<Node> list = null;
+        var list: List<Node>? = null
 
-        for (int targetLevel = 1; targetLevel <= level; targetLevel++) {
-            long loopTime = System.currentTimeMillis();
+        for (targetLevel in 1..level) {
+            val loopTime = System.currentTimeMillis()
 
-            startThread();
+            startThread()
 
-            list = traverse(list);
-            for (Node n : list) n.onSolved(targetLevel);
+            list = traverse(list)
+            for (n in list) n.onSolved(targetLevel)
 
-            Polygon polygon = new Polygon(list);
-            result[targetLevel - 1] = polygon;
+            val polygon = Polygon(list)
+            result.add(polygon)
 
-            joinThread();
+            joinThread()
 
-            if (callback != null) {
-                callback.onResolved(targetLevel - 1, polygon, System.currentTimeMillis() - loopTime);
-            }
-
-            //System.out.println("solve > " + String.format(Locale.US, "index:%d, time:%dms", targetLevel, System.currentTimeMillis() - loopTime));
+            callback?.onResolved(targetLevel - 1, polygon, System.currentTimeMillis() - loopTime)
         }
 
 
-        for (Bisector bisector : bisectors) {
-            bisector.release();
+        for (bisector in bisectors) {
+            bisector.release()
         }
 
-        if (callback != null) {
-            callback.onCompleted(result, System.currentTimeMillis() - time);
-        }
-        //System.out.println("HighVoronoi#solve > " + String.format(Locale.US, "time:%dms vertex:%d", System.currentTimeMillis() - time, bisectors.size()));
-
-        return result;
-
+        callback?.onCompleted(result, System.currentTimeMillis() - time)
+        return result
     }
 
-    private List<Node> traverse(List<Node> list) {
-        Node next = null;
-        Point previous = null;
-        if (list == null) {
-            Set<Point> history = new HashSet<>();
-            Bisector sample = bisectors.get(0);
-            next = sample.intersections.get(1).node;
-            previous = sample.intersections.get(0);
-            while (history.add(next)) {
-                Node current = next;
-                next = current.nextDown(previous);
-                previous = current;
+    private fun traverse(previousNodes: List<Node>?): List<Node> {
+        var (
+            next: Node,
+            previous: Point,
+        ) = previousNodes.let { list ->
+            var next: Node? = null
+            var previous: Point
+            if (list == null) {
+                val history = mutableSetOf<Point>()
+                val sample = bisectors[0]
+                next = requireNotNull(sample.intersections[1].node) {
+                    "first node of an intersection not found (level=1)"
+                }
+                previous = sample.intersections[0]
+                while (history.add(next!!)) {
+                    val current = next
+                    next = current.nextDown(previous)
+                    previous = current
+                }
+            } else {
+                previous = list.last()
+                for (n in list) {
+                    next = n.nextUp(previous)
+                    previous = n
+                    if (next != null && !next.hasSolved()) break
+                }
             }
-        } else {
-            previous = list.get(list.size() - 1);
-            for (Node n : list) {
-                next = n.nextUp(previous);
-                previous = n;
-                if (next != null && !next.hasSolved()) break;
+
+            requireNotNull(next) {
+                "traverse start node not found."
             }
+            require(!next.hasSolved()) {
+                "traverse start node must NOT been solved."
+            }
+
+            next to previous
         }
 
-        if (next == null || previous == null || next.hasSolved()) {
-            throw new RuntimeException("piyo");
-        }
+        val start = next
 
-        Node start = next;
-        list = new LinkedList<>();
-        list.add(start);
-        while (true) {
-            requestExtension(next.p1.line.delaunayPoint);
-            requestExtension(next.p2.line.delaunayPoint);
-            Node current = next;
-            next = current.next(previous);
-            previous = current;
-            if (start.equals(next)) break;
-            list.add(next);
+        return buildList {
+            add(start)
+            while (true) {
+                requestExtension(next.p1.line.delaunayPoint)
+                requestExtension(next.p2.line.delaunayPoint)
+                val current = next
+                next = current.next(previous)
+                previous = current
+                if (start == next) break
+                add(next)
+            }
         }
-        return list;
     }
 
-    private void requestExtension(Point point) {
+    private fun requestExtension(point: Point?) {
         if (point != null && requestedPoint.add(point)) {
-            synchronized (this) {
+            synchronized(this) {
                 // ExtensionTask が待ちで寝ていたら起こす
-                if (requestQueue.isEmpty()) notifyAll();
-                for (Point p : resolver.getNeighbors(point)) {
+                if (requestQueue.isEmpty()) (this as Object).notifyAll()
+                for (p in provider.getNeighbors(point)) {
                     if (addedPoint.add(p)) {
-                        requestQueue.offer(p);
+                        requestQueue.offer(p)
                     }
                 }
             }
         }
     }
 
-    private synchronized Point dequeueRequest() {
+    @Synchronized
+    private fun dequeueRequest(): Point? {
         while (traverseRunning || !requestQueue.isEmpty()) {
             if (requestQueue.isEmpty()) {
                 // メインスレッドの走査が継続中かつ待ち行列が空なら待つ
                 // Not busy wait!!
                 try {
-                    wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    (this as Object).wait()
+                } catch (e: InterruptedException) {
+                    e.printStackTrace()
                 }
             } else {
-                return requestQueue.remove();
+                return requestQueue.remove()
             }
         }
-        return null;
+        return null
     }
 
-    private synchronized void onExtensionComplete(int cnt, long elapsedTime) {
-        extensionRunning = false;
-        System.out.println(String.format("addBisector > size:%d time:%d", cnt, elapsedTime));
+    @Synchronized
+    private fun onExtensionComplete(cnt: Int, elapsedTime: Long) {
+        extensionRunning = false
+        println(String.format("addBisector > size:%d time:%d", cnt, elapsedTime))
         // 走査を既に終えたメインスレッドが待っている場合もあるので起こしてみる
-        notifyAll();
+        (this as Object).notifyAll()
     }
 
-    private void startThread() {
-        traverseRunning = true;
-        extensionRunning = true;
-        new Thread(new Runnable() {
+    private fun startThread() {
+        traverseRunning = true
+        extensionRunning = true
+        Thread(object : Runnable {
+            private var elapsedTime: Long = 0
+            private var cnt = 0
 
-            private long elapsedTime = 0;
-            private int cnt;
-
-            @Override
-            public void run() {
+            override fun run() {
                 while (true) {
-                    Point request = dequeueRequest();
-                    if (request == null) break;
-                    cnt++;
-                    long time = System.currentTimeMillis();
-                    addBisector(request);
-                    elapsedTime += (System.currentTimeMillis() - time);
+                    val request = dequeueRequest() ?: break
+                    cnt++
+                    val time = System.currentTimeMillis()
+                    addBisector(request)
+                    elapsedTime += (System.currentTimeMillis() - time)
                 }
-                onExtensionComplete(cnt, elapsedTime);
+                onExtensionComplete(cnt, elapsedTime)
             }
-
-        }).start();
+        }).start()
     }
 
-    private synchronized void joinThread() {
-        traverseRunning = false;
+    @Synchronized
+    private fun joinThread() {
+        traverseRunning = false
         // ExtensionTaskが仕事が無く寝ているかもしれない
-        if (requestQueue.isEmpty()) notifyAll();
+        if (requestQueue.isEmpty()) (this as Object).notifyAll()
         while (extensionRunning) {
             // ExtensionTaskを待つ
             try {
-                wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                (this as Object).wait()
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
             }
         }
     }
 
-    private void addBoundary(Line self) {
-        Bisector boundary = new Bisector(self);
-        for (Bisector preexist : bisectors) {
-            Point p = boundary.line.getIntersection(preexist.line);
-            Intersection a = new Intersection(p, boundary);
-            Intersection b = new Intersection(p, preexist);
-            Node n = new Node(p, a, b);
-            a.node = n;
-            b.node = n;
-            boundary.addIntersection(a);
-            preexist.addIntersection(b);
+    private fun addBoundary(self: Line) {
+        val boundary = Bisector(self)
+        for (preexist in bisectors) {
+            val p = boundary.line.getIntersection(preexist.line)
+            val a = Intersection(p, boundary)
+            val b = Intersection(p, preexist)
+            val n = Node(p, a, b)
+            a.node = n
+            b.node = n
+            boundary.addIntersection(a)
+            preexist.addIntersection(b)
         }
-        bisectors.add(boundary);
+        bisectors.add(boundary)
     }
 
-    private void addBisector(Point point) {
-        Bisector bisector = new Bisector(point, Line.getPerpendicularBisector(point, center));
-        for (Bisector preexist : bisectors) {
-            Point p = bisector.line.getIntersection(preexist.line);
+    private fun addBisector(point: Point) {
+        val bisector = Bisector(point, Line.getPerpendicularBisector(point, center))
+        for (preexist in bisectors) {
+            val p = bisector.line.getIntersection(preexist.line)
             if (p != null && container.containsPoint(p)) {
-                Intersection a = new Intersection(p, bisector, preexist.line);
-                Intersection b = new Intersection(p, preexist, bisector.line);
-                Node n = new Node(p, a, b);
-                a.node = n;
-                b.node = n;
+                val a = Intersection(center, p, bisector, preexist.line)
+                val b = Intersection(center, p, preexist, bisector.line)
+                val n = Node(p, a, b)
+                a.node = n
+                b.node = n
 
-                bisector.addIntersection(a);
-                preexist.addIntersection(b);
+                bisector.addIntersection(a)
+                preexist.addIntersection(b)
             }
         }
-        bisectors.add(bisector);
+        bisectors.add(bisector)
     }
 
-    private class Node extends Point {
+    private class Node(
+        val point: Point,
+        a: Intersection,
+        b: Intersection,
+    ) : Point() {
+        val onBoundary: Boolean
+        private var _p1: Intersection? = null
+        private var _p2: Intersection? = null
+        private var index = 0f
 
-        static final int STEP_UP = 1;
-        static final int STEP_DOWN = -1;
-        static final int STEP_ZERO = 0;
+        val p1: Intersection
+            get() = requireNotNull(_p1) { "already released" }
+        val p2: Intersection
+            get() = requireNotNull(_p2) { "already released" }
 
-        private Node(Point point, Intersection a, Intersection b) {
-            this.point = point;
-            p1 = a;
-            p2 = b;
-            int cnt = 0;
-            if (a.line.isBoundary) cnt++;
-            if (b.line.isBoundary) cnt++;
-            if (cnt == 0) {
-                onBoundary = false;
-                index = -1;
-            } else if (cnt == 1) {
-                onBoundary = true;
-                index = -1;
-            } else {
-                onBoundary = false;
+        init {
+            _p1 = a
+            _p2 = b
+            var cnt = 0
+            if (a.line.isBoundary) cnt++
+            if (b.line.isBoundary) cnt++
+            when (cnt) {
+                0 -> {
+                    onBoundary = false
+                    index = -1f
+                }
+
+                1 -> {
+                    onBoundary = true
+                    index = -1f
+                }
+
+                else -> {
+                    onBoundary = false
+                }
             }
         }
 
-        final boolean onBoundary;
-        final Point point;
-        private Intersection p1, p2;
-        private float index;
-
-        @Override
-        public double getX() {
-            return point.getX();
+        override fun getX(): Double {
+            return point.getX()
         }
 
-        @Override
-        public double getY() {
-            return point.getY();
+        override fun getY(): Double {
+            return point.getY()
         }
 
         /**
          * 辿ってきた辺とは異なる線分上の隣接頂点でかつ辺のボロノイ次数が同じになる方を返す.
-         *
+         * 
          * @param previous from which you are traversing
          * @return Voronoi-Index of Edge:previous=>this is same as that of Edge:this=>next
          */
-        Node next(Point previous) {
-            if (p1.hasNext() && p1.next().equals(previous)) {
-                return next(p1, p2, false, -p1.getStep());
-            } else if (p1.hasPrevious() && p1.previous().equals(previous)) {
-                return next(p1, p2, true, p1.getStep());
-            } else if (p2.hasNext() && p2.next().equals(previous)) {
-                return next(p2, p1, false, -p2.getStep());
-            } else if (p2.hasPrevious() && p2.previous().equals(previous)) {
-                return next(p2, p1, true, p2.getStep());
+        fun next(previous: Point): Node {
+            val p1 = this.p1
+            val p2 = this.p2
+            return if (p1.hasNext() && p1.next() == previous) {
+                next(p1, p2, false, -p1.step)
+            } else if (p1.hasPrevious() && p1.previous() == previous) {
+                next(p1, p2, true, p1.step)
+            } else if (p2.hasNext() && p2.next() == previous) {
+                next(p2, p1, false, -p2.step)
+            } else if (p2.hasPrevious() && p2.previous() == previous) {
+                next(p2, p1, true, p2.step)
             } else {
-                throw new NoSuchElementException("not found");
+                throw NoSuchElementException("next not found")
             }
         }
 
-        private Node next(Intersection current, Intersection other, boolean forward, int step) {
-            if (onBoundary && index > 0) {
+        fun next(current: Intersection, other: Intersection, forward: Boolean, step: Int): Node {
+            val intersection = if (onBoundary && index > 0) {
                 // 頂点がFrame境界線上（Vertexではない）でかつ
                 // この頂点が解決済みなら無視して同じ境界線上のお隣さんへ辿る
-                return forward ? current.next().node : current.previous().node;
+                if (forward) current.next() else current.previous()
             } else {
                 // 頂点がFrame内部なら step = Node.STEP_UP/DOWN　のいずれか
                 // FrameのVertexに位置する場合は例外的に step = Node.STEP_ZERO
-                return other.neighbor(-step).node;
+                other.neighbor(-step)
+            }
+            return requireNotNull(intersection.node) {
+                "node reference not found. $intersection"
             }
         }
 
         /**
          * 辿ってきた辺とは異なる線分上の隣接頂点のうちこの頂点から見てボロノイ次数が
-         * 下がるまたは変化しない方を返す.<br>
+         * 下がるまたは変化しない方を返す.
+         *
          * この頂点がFrame内部なら必ず次数が下がる隣接頂点を返すが、
          * Frame境界線のVertexに相当する場合は例外的に次数変化0の方向の頂点を返す
-         *
+         * 
          * @param previous from which you are traversing
-         * @return Not null
          */
-        @NotNull
-        Node nextDown(Point previous) {
-            Intersection target = null;
-            if (p1.isNeighbor(previous)) {
-                target = p2;
-                //return p2.neighbor(Node.STEP_DOWN).node;
-            } else if (p2.isNeighbor(previous)) {
-                target = p1;
-                //return p1.neighbor(Node.STEP_DOWN).node;
+        fun nextDown(previous: Point?): Node {
+            val target = when {
+                p1.isNeighbor(previous) -> p2
+                p2.isNeighbor(previous) -> p1
+                else -> throw NoSuchElementException("not found")
             }
-            if (target == null) {
-                throw new NoSuchElementException("not found");
-            }
-            if (target.hasNeighbor(Node.STEP_DOWN)) {
-                return target.neighbor(Node.STEP_DOWN).node;
+            val intersection = if (target.hasNeighbor(STEP_DOWN)) {
+                target.neighbor(STEP_DOWN)
             } else {
-                return target.neighbor(Node.STEP_ZERO).node;
+                target.neighbor(STEP_ZERO)
+            }
+            return requireNotNull(intersection.node) {
+                "node reference not found. $intersection"
             }
         }
 
         /**
-         * この頂点から見てボロノイ次数が上がる方向の隣接頂点を返す<br>
-         * 辿ってきた方向{@code previous => this}に対して異なる線分上、同じ線分上の順で探す。
-         * それでも存在しない場合はNull
+         * この頂点から見てボロノイ次数が上がる方向の隣接頂点を返す
          *
+         * 辿ってきた方向`previous => this`に対して異なる線分上、同じ線分上の順で探す。
+         * それでも存在しない場合はNull
+         * 
          * @param previous from which you are traversing
          * @return Null if no such node
          */
-        @Nullable
-        Node nextUp(Point previous) {
-            Intersection t1 = null;
-            Intersection t2 = null;
-            if (p1.isNeighbor(previous)) {
-                t1 = p2;
-                t2 = p1;
-                //return p2.neighbor(Node.STEP_UP).node;
-            } else if (p2.isNeighbor(previous)) {
-                t1 = p1;
-                t2 = p2;
-                //return p1.neighbor(Node.STEP_UP).node;
+        fun nextUp(previous: Point?): Node? {
+            val (t1, t2) = when {
+                p1.isNeighbor(previous) -> p2 to p1
+                p2.isNeighbor(previous) -> p1 to p2
+                else -> throw NoSuchElementException("not found")
             }
-            if (t1 == null || t2 == null) {
-                throw new NoSuchElementException("not found");
+            val intersection = when {
+                t1.hasNeighbor(STEP_UP) -> t1.neighbor(STEP_UP)
+                t2.hasNeighbor(STEP_UP) -> t2.neighbor(STEP_UP)
+                else -> return null
             }
-            if (t1.hasNeighbor(Node.STEP_UP)) {
-                return t1.neighbor(Node.STEP_UP).node;
-            } else if (t2.hasNeighbor(Node.STEP_UP)) {
-                return t2.neighbor(Node.STEP_UP).node;
+            return requireNotNull(intersection.node) {
+                "node reference not found. $intersection"
             }
-            return null;
         }
 
-        void onSolved(int level) {
-            p1.onSolved();
-            p2.onSolved();
+        fun onSolved(level: Int) {
+            p1.onSolved()
+            p2.onSolved()
             if (index < 0) {
-                if (p1.line.isBoundary || p2.line.isBoundary) {
+                index = if (p1.line.isBoundary || p2.line.isBoundary) {
                     // フレーム上の頂点はn次以上のボロノイ図に登場する
-                    index = level;
+                    level.toFloat()
                 } else {
                     // フレーム内部の頂点はn,n+1次のボロノイ図にしか登場しない
-                    index = level + 0.5f;
+                    level + 0.5f
                 }
-            } else if (Math.round(index) != index) {
+            } else if (index.roundToInt().toFloat() != index) {
                 // 整合性の確認
-                if (index + 0.5f != level) throw new RuntimeException("index mismatch");
+                require(index + 0.5f == level.toFloat()) {
+                    "index mismatch"
+                }
             }
         }
 
-        boolean hasSolved() {
-            return index >= 0f;
+        fun hasSolved(): Boolean {
+            return index >= 0f
         }
 
-        void release() {
-            p1 = null;
-            p2 = null;
+        fun release() {
+            _p1 = null
+            _p2 = null
         }
 
-        @Override
-        public String toString() {
+        override fun toString(): String {
             if (index < 0) {
-                return String.format("%s not solved", super.toString());
-            } else if (index == 0) {
-                return String.format("%s Vertex", super.toString());
+                return String.format("%s not solved", super.toString())
+            } else if (index == 0f) {
+                return String.format("%s Vertex", super.toString())
             } else {
-                return String.format("%s %.1f", super.toString(), index);
+                return String.format("%s %.1f", super.toString(), index)
             }
         }
 
+        companion object {
+            const val STEP_UP: Int = 1
+            const val STEP_DOWN: Int = -1
+            const val STEP_ZERO: Int = 0
+        }
     }
 
-    private class Intersection extends Point {
+    private class Intersection : Point {
+        constructor(center: Point, point: Point, line: Bisector, other: Line) {
+            this.point = point
+            this.line = line
 
-        private Intersection(Point point, Bisector line, Line other) {
-            this.point = point;
-            this.line = line;
-
-            double dx = line.line.b;
-            double dy = -line.line.a;
-            if (dx < 0 || (dx == 0 && dy < 0)) {
-                dx *= -1;
-                dy *= -1;
+            var dx = line.line.b
+            var dy = -line.line.a
+            if (dx < 0 || (dx == 0.0 && dy < 0)) {
+                dx *= -1.0
+                dy *= -1.0
             }
-            Point p = new BasePoint(point.getX() + dx, point.getY() + dy);
-            this.step = other.onSameSide(p, center) ? Node.STEP_DOWN : Node.STEP_UP;
+            val p: Point = BasePoint(point.getX() + dx, point.getY() + dy)
+            this.step = if (other.onSameSide(
+                    p,
+                    center
+                )
+            ) Node.STEP_DOWN else Node.STEP_UP
         }
 
-        private Intersection(Point point, Bisector line) {
-            this.point = point;
-            this.line = line;
-            this.step = Node.STEP_ZERO;
+        constructor(point: Point, line: Bisector) {
+            this.point = point
+            this.line = line
+            this.step = Node.STEP_ZERO
         }
 
-        final Point point;
-        final private Bisector line;
-        final int step;
-        private Node node;
+        val point: Point
+        val line: Bisector
+        val step: Int
+        var node: Node? = null
 
-        private int index = -1;
-        private Intersection previous, next;
+        private var index = -1
+        private var previous: Intersection? = null
+        private var next: Intersection? = null
 
-        @Override
-        public double getX() {
-            return point.getX();
+        override fun getX(): Double {
+            return point.getX()
         }
 
-        @Override
-        public double getY() {
-            return point.getY();
+        override fun getY(): Double {
+            return point.getY()
         }
 
 
-        int getStep() {
-            return step;
-        }
-
-        void insert(Intersection previous, Intersection next, int index) {
-            this.previous = previous;
-            this.next = next;
-            if (previous != null) previous.next = this;
+        fun insert(previous: Intersection?, next: Intersection?, index: Int) {
+            this.previous = previous
+            this.next = next
+            if (previous != null) previous.next = this
             if (next != null) {
-                next.previous = this;
-                next.incrementIndex();
+                next.previous = this
+                next.incrementIndex()
             }
-            this.index = index;
+            this.index = index
         }
 
-        void incrementIndex() {
-            index++;
-            if (next != null) next.incrementIndex();
+        fun incrementIndex() {
+            index++
+            if (next != null) next!!.incrementIndex()
         }
 
-        boolean hasPrevious() {
-            return previous != null;
+        fun hasPrevious(): Boolean {
+            return previous != null
         }
 
-        boolean hasNext() {
-            return next != null;
+        fun hasNext(): Boolean {
+            return next != null
         }
 
-        boolean isNeighbor(Point p) {
-            return (hasNext() && next.equals(p)) || (hasPrevious() && previous.equals(p));
+        fun isNeighbor(p: Point?): Boolean {
+            return (hasNext() && next == p) || (hasPrevious() && previous == p)
         }
 
-        boolean hasNeighbor(int step) {
+        fun hasNeighbor(step: Int): Boolean {
             if (step == 0 && this.step == 0) {
-                return true;
+                return true
             } else if (step != 0 && this.step != 0) {
-                return (step == this.step) ? hasNext() : hasPrevious();
+                return if (step == this.step) hasNext() else hasPrevious()
             }
-            return false;
+            return false
         }
 
-        Intersection neighbor(int step) {
+        fun neighbor(step: Int): Intersection {
             if (step == 0 && this.step == 0) {
-                if (hasPrevious()) return previous;
-                if (hasNext()) return next;
+                return requireNotNull(previous ?: next) {
+                    "previous nor next is null."
+                }
             } else if (step != 0 && this.step != 0) {
-                return (step == this.step) ? next() : previous();
+                return if (step == this.step) next() else previous()
             }
-            throw new IllegalArgumentException("step invalid");
+            throw IllegalArgumentException("invalid step: $step")
         }
 
-        Intersection next() {
-            if (next == null) {
-                throw new NoSuchElementException();
-            }
-            return next;
+        fun next(): Intersection = requireNotNull(next)
+
+        fun previous(): Intersection = requireNotNull(previous)
+
+        fun getIndex(): Int {
+            require(index >= 0) { "index not set yet" }
+            return index
         }
 
-        Intersection previous() {
-            if (previous == null) {
-                throw new NoSuchElementException();
-            }
-            return previous;
+        fun onSolved() {
+            line.onIntersectionSolved(this)
         }
 
-        int getIndex() {
-            if (index < 0) throw new IllegalStateException("index not set yet");
-            return index;
-        }
-
-        void setIndex(int index) {
-            this.index = index;
-        }
-
-        void onSolved() {
-            line.onIntersectionSolved(this);
-        }
-
-        void release() {
-            previous = null;
-            next = null;
+        fun release() {
+            previous = null
+            next = null
             if (node == null) {
-                return;
+                return
             }
-            node.release();
-            node = null;
+            node?.release()
+            node = null
         }
 
-        @Override
-        public String toString() {
-            return String.format("%s %+d", super.toString(), step);
+        override fun toString(): String {
+            return String.format("%s %+d", super.toString(), step)
         }
-
     }
 
     private class Bisector {
-
-        private Bisector(Point point, Line line) {
-            this.delaunayPoint = point;
-            this.line = line;
-            intersections = new LinkedList<>();
-            isBoundary = false;
-
-            /*inspectBoundary(boundaryA);
-            inspectBoundary(boundaryB);
-            inspectBoundary(boundaryC);
-            if ( intersections.size() != 2 ){
-                throw new RuntimeException("hoge");
-            }*/
+        constructor(point: Point?, line: Line) {
+            this.delaunayPoint = point
+            this.line = line
+            intersections = LinkedList<Intersection>()
+            isBoundary = false
         }
 
         // special for boundary line
-        private Bisector(Line edge) {
-            delaunayPoint = null;
-            line = edge;
-            isBoundary = true;
-            intersections = new LinkedList<>();
-            //addIntersection(new Intersection(edge.a, this));
-            //addIntersection(new Intersection(edge.b, this));
+        constructor(edge: Line) {
+            delaunayPoint = null
+            line = edge
+            isBoundary = true
+            intersections = LinkedList<Intersection>()
         }
 
-        private void inspectBoundary(Edge boundary) {
-            Point p = boundary.getIntersection(line);
-            if (p != null) {
-                Intersection i = new Intersection(p, this, boundary.toLine());
-                addIntersection(i);
-            }
+        val intersections: MutableList<Intersection>
+        private var solvedPointIndexFrom = Int.MAX_VALUE
+        private var solvedPointIndexTo = -1
+
+        val delaunayPoint: Point?
+        val line: Line
+        val isBoundary: Boolean
+
+        @Synchronized
+        fun onIntersectionSolved(intersection: Intersection) {
+            val index = intersection.getIndex()
+            solvedPointIndexFrom = min(solvedPointIndexFrom, index)
+            solvedPointIndexTo = max(solvedPointIndexTo, index)
         }
 
-        private List<Intersection> intersections;
-        private int solvedPointIndexFrom = Integer.MAX_VALUE;
-        private int solvedPointIndexTo = -1;
-
-        final Point delaunayPoint;
-        final Line line;
-        final boolean isBoundary;
-
-        synchronized void onIntersectionSolved(Intersection intersection) {
-            int index = intersection.getIndex();
-            solvedPointIndexFrom = Math.min(solvedPointIndexFrom, index);
-            solvedPointIndexTo = Math.max(solvedPointIndexTo, index);
-            //requestExtension(delaunayPoint);
-        }
-
-        synchronized void addIntersection(Intersection intersection) {
-            final int size = intersections.size();
-            int index = addIntersection(intersection, 0, size);
+        @Synchronized
+        fun addIntersection(intersection: Intersection) {
+            val size = intersections.size
+            val index = addIntersection(intersection, 0, size)
 
             intersection.insert(
-                    index > 0 ? intersections.get(index - 1) : null,
-                    index < size ? intersections.get(index) : null,
-                    index
-            );
-            intersections.add(index, intersection);
+                if (index > 0) intersections[index - 1] else null,
+                if (index < size) intersections[index] else null,
+                index
+            )
+            intersections.add(index, intersection)
             if (solvedPointIndexFrom < solvedPointIndexTo) {
                 if (index <= solvedPointIndexFrom) {
-                    solvedPointIndexFrom++;
-                    solvedPointIndexTo++;
+                    solvedPointIndexFrom++
+                    solvedPointIndexTo++
                 } else {
-                    if (index <= solvedPointIndexTo) {
-                        throw new IllegalStateException("new intersection added to resolved-range!!");
+                    require(index > solvedPointIndexTo) {
+                        "new intersection added to resolved-range!!"
                     }
                 }
             }
         }
 
-        private int addIntersection(Intersection point, int indexFrom, int indexTo) {
+        fun addIntersection(point: Intersection, indexFrom: Int, indexTo: Int): Int {
             if (indexFrom == indexTo) {
-                return indexFrom;
+                return indexFrom
             } else {
-                int mid = (indexFrom + indexTo - 1) / 2;
-                // TODO if result == 0, yet may not be
-                int result = Point.compare(point, intersections.get(mid));
-                if (result < 0) {
-                    return addIntersection(point, indexFrom, mid);
-                } else {
-                    return addIntersection(point, mid + 1, indexTo);
+                val midIndex = (indexFrom + indexTo - 1) / 2
+                val mid = intersections[midIndex]
+                return when {
+                    point < mid -> addIntersection(point, indexFrom, midIndex)
+                    point > mid -> addIntersection(point, midIndex + 1, indexTo)
+                    else -> throw IllegalArgumentException()
                 }
             }
         }
 
-        void release() {
-            for (Intersection item : intersections) item.release();
-            intersections.clear();
-            intersections = null;
+        fun release() {
+            for (item in intersections) item.release()
+            intersections.clear()
         }
-
     }
-
 }
 

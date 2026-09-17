@@ -1,7 +1,6 @@
 package com.seo4d696b75.diagram.station
 
 import com.seo4d696b75.diagram.core.HighVoronoi
-import com.seo4d696b75.diagram.core.Polygon
 import com.seo4d696b75.diagram.core.Rectangle
 import com.seo4d696b75.diagram.station.model.GeoJsonFeature
 import com.seo4d696b75.diagram.station.model.GeoJsonGeometry
@@ -33,23 +32,8 @@ fun List<HighVoronoiStation>.calculateHighVoronoi(
         val station = getStationByCode(point.code)
         station.next.map { nextCode -> getStationByCode(nextCode).toPoint() }
     }
-    val callback = object : HighVoronoi.ResultCallback {
-        override fun onResolved(
-            index: Int,
-            points: Polygon?,
-            time: Long,
-        ) {
-        }
 
-        override fun onCompleted(
-            results: Array<out Polygon?>,
-            time: Long,
-        ) {
-        }
-
-    }
-
-    val result = highVoronoi.solve(level, center.toPoint(), provider, callback)
+    val result = highVoronoi.solve(level, center.toPoint(), provider)
 
     val geometry = GeoJsonGeometry.MultiPolygon(
         coordinates = result.map { polygon ->
