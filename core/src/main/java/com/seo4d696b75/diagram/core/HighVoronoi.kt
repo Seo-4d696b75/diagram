@@ -52,11 +52,38 @@ class HighVoronoi(
         fun onCompleted(results: List<Polygon>, milliseconds: Long)
     }
 
+    /**
+     * 中心の座標点
+     */
     private lateinit var center: Point
+
+    /**
+     * 各座標点 [points] と [center] の垂直二等分線の集合
+     *
+     * 二等分線の交点を辿ることで高次ボロノイ分割を計算する
+     */
     private lateinit var bisectors: MutableList<Bisector>
+
+    /**
+     * 隣接点の取得方法
+     */
     private lateinit var provider: PointProvider
-    private lateinit var requestedPoint: MutableSet<Point>
-    private lateinit var addedPoint: MutableSet<Point>
+
+    /**
+     * 隣接点を確認済みの点集合
+     *
+     * - [provider] による取得の重複を防止する
+     * - 初期状態では[center]のみ含む
+     */
+    private lateinit var requestedPoints: MutableSet<Point>
+
+    /**
+     * 座標点の集合
+     *
+     * - [bisectors] 追加計算の重複を防止する
+     * - 初期状態では[center]のみ含む
+     */
+    private lateinit var points: MutableSet<Point>
 
     /**
      * 計算する
@@ -87,24 +114,23 @@ class HighVoronoi(
         addBoundary(Line(container.b, container.c))
         addBoundary(Line(container.c, container.a))
 
-        addedPoint = mutableSetOf(center)
-        requestedPoint = mutableSetOf(center)
+        points = mutableSetOf(center)
+        requestedPoints = mutableSetOf(center)
 
-        for (point in provider.getNeighbors(center)) {
-            addedPoint.add(point)
-            addBisector(point)
-        }
+        expandDelaunayPoints(center)
 
         var previousNodes: List<Node>? = null
 
-        for (targetLevel in 1..level) {
+        for (currentLevel in 1..level) {
             val loopTime = System.currentTimeMillis()
 
             val queue = Channel<Point>()
 
+            // 走査する範囲内の交点は全て計算済みと仮定するため、
+            // 交点の追加処理とは並行して実行可能
             val nodes = async {
                 val list = traverse(previousNodes, queue)
-                for (n in list) n.onSolved(targetLevel)
+                for (n in list) n.onSolved(currentLevel)
 
                 val polygon = Polygon(list)
                 result.add(polygon)
@@ -113,14 +139,21 @@ class HighVoronoi(
             }
 
             val expandJob = launch {
-                expandDelaunayPoints(queue)
+                // 隣接点の確認＆交点の追加計算は直列で行う
+                for (request in queue) {
+                    if (currentLevel < level) {
+                        // 次数が増えるほど交点の数は2乗のオーダーで増加する
+                        // 最後の計算は不要なためスキップ
+                        expandDelaunayPoints(request)
+                    }
+                }
             }
 
             previousNodes = nodes.await()
             expandJob.join()
 
             callback?.onResolved(
-                index = targetLevel - 1,
+                index = currentLevel - 1,
                 points = result.last(),
                 milliseconds = System.currentTimeMillis() - loopTime,
             )
@@ -181,8 +214,12 @@ class HighVoronoi(
             add(start)
             while (true) {
                 // enqueue
-                requestExpandDelaunay(requestQueue, next.p1.line.delaunayPoint)
-                requestExpandDelaunay(requestQueue, next.p2.line.delaunayPoint)
+                listOfNotNull(
+                    next.p1.line.delaunayPoint,
+                    next.p2.line.delaunayPoint,
+                )
+                    .filter { requestedPoints.add(it) }
+                    .forEach { requestQueue.send(it) }
 
                 // traverse
                 val current = next
@@ -197,18 +234,10 @@ class HighVoronoi(
         }
     }
 
-    private suspend fun requestExpandDelaunay(queue: Channel<Point>, point: Point?) {
-        if (point != null && requestedPoint.add(point)) {
-            queue.send(point)
-        }
-    }
-
-    private suspend fun expandDelaunayPoints(queue: Channel<Point>) {
-        for (request in queue) {
-            for (p in provider.getNeighbors(request)) {
-                if (addedPoint.add(p)) {
-                    addBisector(p)
-                }
+    private suspend fun expandDelaunayPoints(request: Point) {
+        for (p in provider.getNeighbors(request)) {
+            if (points.add(p)) {
+                addBisector(p)
             }
         }
     }
