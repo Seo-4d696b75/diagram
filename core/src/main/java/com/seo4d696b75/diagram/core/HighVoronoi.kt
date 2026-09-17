@@ -124,7 +124,7 @@ class HighVoronoi(
         for (currentLevel in 1..level) {
             val loopTime = System.currentTimeMillis()
 
-            val queue = Channel<Point>()
+            val queue = Channel<Point>(capacity = Channel.BUFFERED)
 
             // 走査する範囲内の交点は全て計算済みと仮定するため、
             // 交点の追加処理とは並行して実行可能
