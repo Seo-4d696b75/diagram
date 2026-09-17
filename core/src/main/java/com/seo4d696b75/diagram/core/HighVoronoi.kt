@@ -34,7 +34,7 @@ class HighVoronoi(
          * @param point 現在の点
          * @return 隣接点の集合。条件を満たす要素がない場合は空のリスト。
          */
-        fun getNeighbors(point: Point): Iterable<Point>
+        suspend fun getNeighbors(point: Point): Iterable<Point>
     }
 
     interface ResultCallback {
@@ -65,7 +65,7 @@ class HighVoronoi(
      * @param callback 各次数で計算が終わる度にコールされる
      * @return [1,level]の次数で計算された多角形の配列, [index-1]のポリゴンがindex次の解
      */
-    fun solve(
+    suspend fun solve(
         level: Int,
         center: Point,
         provider: PointProvider,
@@ -176,18 +176,18 @@ class HighVoronoi(
 
     private fun requestExtension(point: Point?) {
         if (point != null && requestedPoint.add(point)) {
-            for (p in provider.getNeighbors(point)) {
-                if (addedPoint.add(p)) {
-                    requestQueue.offer(p)
-                }
-            }
+            requestQueue.offer(point)
         }
     }
 
-    private fun expandDelaunayPoints() {
+    private suspend fun expandDelaunayPoints() {
         while (requestQueue.isNotEmpty()) {
             val request = requestQueue.remove()
-            addBisector(request)
+            for (p in provider.getNeighbors(request)) {
+                if (addedPoint.add(p)) {
+                    addBisector(p)
+                }
+            }
         }
     }
 
