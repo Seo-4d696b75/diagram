@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation(libs.jetbrains.annotation)
+    implementation(libs.kotlinx.coroutines)
 }
 
 tasks.test {

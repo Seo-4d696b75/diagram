@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":core"))
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines)
     testImplementation(libs.junit.jupiter.api)
     testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.jupiter.engine)

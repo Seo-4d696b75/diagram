@@ -7,6 +7,7 @@ import com.seo4d696b75.diagram.station.model.GeoJsonGeometry
 import com.seo4d696b75.diagram.station.model.HighVoronoiStation
 import com.seo4d696b75.diagram.station.model.StationPoint
 import com.seo4d696b75.diagram.station.model.toGeoJSON
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
@@ -33,7 +34,9 @@ fun List<HighVoronoiStation>.calculateHighVoronoi(
         station.next.map { nextCode -> getStationByCode(nextCode).toPoint() }
     }
 
-    val result = highVoronoi.solve(level, center.toPoint(), provider)
+    val result = runBlocking {
+        highVoronoi.solve(level, center.toPoint(), provider)
+    }
 
     val geometry = GeoJsonGeometry.MultiPolygon(
         coordinates = result.map { polygon ->
