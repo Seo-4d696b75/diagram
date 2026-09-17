@@ -1,7 +1,10 @@
 package com.seo4d696b75.diagram.core
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.util.LinkedList
-import java.util.Queue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -54,7 +57,6 @@ class HighVoronoi(
     private lateinit var provider: PointProvider
     private lateinit var requestedPoint: MutableSet<Point>
     private lateinit var addedPoint: MutableSet<Point>
-    private lateinit var requestQueue: Queue<Point>
 
     /**
      * 計算する
@@ -70,9 +72,9 @@ class HighVoronoi(
         center: Point,
         provider: PointProvider,
         callback: ResultCallback? = null,
-    ): List<Polygon> {
-        this.center = center
-        this.provider = provider
+    ): List<Polygon> = coroutineScope {
+        this@HighVoronoi.center = center
+        this@HighVoronoi.provider = provider
 
         Setting.error = 2.0.pow(-30.0)
 
@@ -87,40 +89,55 @@ class HighVoronoi(
 
         addedPoint = mutableSetOf(center)
         requestedPoint = mutableSetOf(center)
-        requestQueue = LinkedList()
-
 
         for (point in provider.getNeighbors(center)) {
             addedPoint.add(point)
             addBisector(point)
         }
 
-        var list: List<Node>? = null
+        var previousNodes: List<Node>? = null
 
         for (targetLevel in 1..level) {
             val loopTime = System.currentTimeMillis()
 
-            list = traverse(list)
-            for (n in list) n.onSolved(targetLevel)
+            val queue = Channel<Point>()
 
-            val polygon = Polygon(list)
-            result.add(polygon)
+            val nodes = async {
+                val list = traverse(previousNodes, queue)
+                for (n in list) n.onSolved(targetLevel)
 
-            expandDelaunayPoints()
+                val polygon = Polygon(list)
+                result.add(polygon)
 
-            callback?.onResolved(targetLevel - 1, polygon, System.currentTimeMillis() - loopTime)
+                list
+            }
+
+            val expandJob = launch {
+                expandDelaunayPoints(queue)
+            }
+
+            previousNodes = nodes.await()
+            expandJob.join()
+
+            callback?.onResolved(
+                index = targetLevel - 1,
+                points = result.last(),
+                milliseconds = System.currentTimeMillis() - loopTime,
+            )
         }
-
 
         for (bisector in bisectors) {
             bisector.release()
         }
 
         callback?.onCompleted(result, System.currentTimeMillis() - time)
-        return result
+        result
     }
 
-    private fun traverse(previousNodes: List<Node>?): List<Node> {
+    private suspend fun traverse(
+        previousNodes: List<Node>?,
+        requestQueue: Channel<Point>,
+    ): List<Node> {
         var (
             next: Node,
             previous: Point,
@@ -163,26 +180,31 @@ class HighVoronoi(
         return buildList {
             add(start)
             while (true) {
-                requestExtension(next.p1.line.delaunayPoint)
-                requestExtension(next.p2.line.delaunayPoint)
+                // enqueue
+                requestExpandDelaunay(requestQueue, next.p1.line.delaunayPoint)
+                requestExpandDelaunay(requestQueue, next.p2.line.delaunayPoint)
+
+                // traverse
                 val current = next
                 next = current.next(previous)
                 previous = current
                 if (start == next) break
                 add(next)
             }
+
+            // close queue
+            requestQueue.close()
         }
     }
 
-    private fun requestExtension(point: Point?) {
+    private suspend fun requestExpandDelaunay(queue: Channel<Point>, point: Point?) {
         if (point != null && requestedPoint.add(point)) {
-            requestQueue.offer(point)
+            queue.send(point)
         }
     }
 
-    private suspend fun expandDelaunayPoints() {
-        while (requestQueue.isNotEmpty()) {
-            val request = requestQueue.remove()
+    private suspend fun expandDelaunayPoints(queue: Channel<Point>) {
+        for (request in queue) {
             for (p in provider.getNeighbors(request)) {
                 if (addedPoint.add(p)) {
                     addBisector(p)
