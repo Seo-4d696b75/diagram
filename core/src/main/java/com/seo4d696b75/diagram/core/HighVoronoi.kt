@@ -55,8 +55,6 @@ class HighVoronoi(
     private lateinit var requestedPoint: MutableSet<Point>
     private lateinit var addedPoint: MutableSet<Point>
     private lateinit var requestQueue: Queue<Point>
-    private var extensionRunning = false
-    private var traverseRunning = false
 
     /**
      * 計算する
@@ -102,15 +100,13 @@ class HighVoronoi(
         for (targetLevel in 1..level) {
             val loopTime = System.currentTimeMillis()
 
-            startThread()
-
             list = traverse(list)
             for (n in list) n.onSolved(targetLevel)
 
             val polygon = Polygon(list)
             result.add(polygon)
 
-            joinThread()
+            expandDelaunayPoints()
 
             callback?.onResolved(targetLevel - 1, polygon, System.currentTimeMillis() - loopTime)
         }
@@ -180,76 +176,18 @@ class HighVoronoi(
 
     private fun requestExtension(point: Point?) {
         if (point != null && requestedPoint.add(point)) {
-            synchronized(this) {
-                // ExtensionTask が待ちで寝ていたら起こす
-                if (requestQueue.isEmpty()) (this as Object).notifyAll()
-                for (p in provider.getNeighbors(point)) {
-                    if (addedPoint.add(p)) {
-                        requestQueue.offer(p)
-                    }
+            for (p in provider.getNeighbors(point)) {
+                if (addedPoint.add(p)) {
+                    requestQueue.offer(p)
                 }
             }
         }
     }
 
-    @Synchronized
-    private fun dequeueRequest(): Point? {
-        while (traverseRunning || !requestQueue.isEmpty()) {
-            if (requestQueue.isEmpty()) {
-                // メインスレッドの走査が継続中かつ待ち行列が空なら待つ
-                // Not busy wait!!
-                try {
-                    (this as Object).wait()
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
-                }
-            } else {
-                return requestQueue.remove()
-            }
-        }
-        return null
-    }
-
-    @Synchronized
-    private fun onExtensionComplete(cnt: Int, elapsedTime: Long) {
-        extensionRunning = false
-        println(String.format("addBisector > size:%d time:%d", cnt, elapsedTime))
-        // 走査を既に終えたメインスレッドが待っている場合もあるので起こしてみる
-        (this as Object).notifyAll()
-    }
-
-    private fun startThread() {
-        traverseRunning = true
-        extensionRunning = true
-        Thread(object : Runnable {
-            private var elapsedTime: Long = 0
-            private var cnt = 0
-
-            override fun run() {
-                while (true) {
-                    val request = dequeueRequest() ?: break
-                    cnt++
-                    val time = System.currentTimeMillis()
-                    addBisector(request)
-                    elapsedTime += (System.currentTimeMillis() - time)
-                }
-                onExtensionComplete(cnt, elapsedTime)
-            }
-        }).start()
-    }
-
-    @Synchronized
-    private fun joinThread() {
-        traverseRunning = false
-        // ExtensionTaskが仕事が無く寝ているかもしれない
-        if (requestQueue.isEmpty()) (this as Object).notifyAll()
-        while (extensionRunning) {
-            // ExtensionTaskを待つ
-            try {
-                (this as Object).wait()
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            }
+    private fun expandDelaunayPoints() {
+        while (requestQueue.isNotEmpty()) {
+            val request = requestQueue.remove()
+            addBisector(request)
         }
     }
 
@@ -607,14 +545,12 @@ class HighVoronoi(
         val line: Line
         val isBoundary: Boolean
 
-        @Synchronized
         fun onIntersectionSolved(intersection: Intersection) {
             val index = intersection.getIndex()
             solvedPointIndexFrom = min(solvedPointIndexFrom, index)
             solvedPointIndexTo = max(solvedPointIndexTo, index)
         }
 
-        @Synchronized
         fun addIntersection(intersection: Intersection) {
             val size = intersections.size
             val index = addIntersection(intersection, 0, size)
