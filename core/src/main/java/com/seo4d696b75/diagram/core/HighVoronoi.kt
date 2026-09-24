@@ -71,6 +71,7 @@ class HighVoronoi(
         provider: PointProvider,
         callback: ResultCallback? = null,
     ): List<Polygon> {
+        require(level >= 1) { "level must be >= 1" }
         this.center = center
         this.provider = provider
 
