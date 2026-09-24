@@ -16,12 +16,13 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * @param level 次数（１以上の整数）
  * @param center 中心の駅
+ * @param boundary すべての駅の座標点を内包する矩形範囲
  */
 suspend fun List<HighVoronoiStation>.calculateHighVoronoi(
     level: Int,
     center: HighVoronoiStation,
+    boundary: Rectangle = Rectangle(127.0, 46.0, 146.0, 26.0),
 ): GeoJsonFeature<GeoJsonGeometry.MultiPolygon> {
-    val boundary = Rectangle(127.0, 46.0, 146.0, 26.0)
     val highVoronoi = HighVoronoi(boundary.container)
     val map = associateBy { it.code }
     val getStationByCode = { code: Int ->
