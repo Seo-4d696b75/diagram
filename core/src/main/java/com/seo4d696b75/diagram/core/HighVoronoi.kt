@@ -41,7 +41,7 @@ class HighVoronoi(
         /**
          * 各n次ボロノイ図が計算されると順次呼ばれる
          * 
-         * @param index  0始まりでカウントした次数 `[0,level)`
+         * @param index  次数 `[1,level]`
          * @param points 閉じた多角形
          */
         fun onResolved(index: Int, points: Polygon, milliseconds: Long)
@@ -109,7 +109,7 @@ class HighVoronoi(
 
             expandDelaunayPoints()
 
-            callback?.onResolved(targetLevel - 1, polygon, System.currentTimeMillis() - loopTime)
+            callback?.onResolved(targetLevel, polygon, System.currentTimeMillis() - loopTime)
         }
 
 
