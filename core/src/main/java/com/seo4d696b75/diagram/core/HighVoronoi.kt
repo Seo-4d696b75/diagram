@@ -1,5 +1,8 @@
 package com.seo4d696b75.diagram.core
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.util.LinkedList
 import java.util.Queue
 import kotlin.math.max
@@ -116,7 +119,7 @@ class HighVoronoi(
         points = mutableSetOf(center)
         requestedPoints = mutableSetOf(center)
 
-        expandDelaunayPoints(center)
+        expandDelaunayPoints(listOf(center))
 
         var previousNodes: List<Node>? = null
 
@@ -132,12 +135,10 @@ class HighVoronoi(
             result.add(polygon)
 
             // 隣接点の確認＆交点の追加計算
-            for (request in queue) {
-                if (currentLevel < level) {
-                    // 次数が増えるほど交点の数は2乗のオーダーで増加する
-                    // 最後の計算は不要なためスキップ
-                    expandDelaunayPoints(request)
-                }
+            if (currentLevel < level) {
+                // 次数が増えるほど交点の数は2乗のオーダーで増加する
+                // 最後の計算は不要なためスキップ
+                expandDelaunayPoints(queue)
             }
 
             callback?.onResolved(
@@ -220,12 +221,27 @@ class HighVoronoi(
         }
     }
 
-    private suspend fun expandDelaunayPoints(request: Point) {
-        for (p in provider.getNeighbors(request)) {
-            if (points.add(p)) {
-                addBisector(p)
+    private suspend fun expandDelaunayPoints(queue: Iterable<Point>) = coroutineScope {
+        val neighbors = Channel<Point>(capacity = Channel.BUFFERED)
+
+        // 交点の追加計算が最も高コスト
+        // 可能な限りブロックしないように隣接点の解決は並列化する
+        val getNeighborsJob = launch {
+            for (request in queue) {
+                provider
+                    .getNeighbors(request)
+                    .filter { points.add(it) }
+                    .forEach { neighbors.send(it) }
             }
+            neighbors.close()
         }
+
+        // 交点の追加計算は並列化できない
+        for (point in neighbors) {
+            addBisector(point)
+        }
+
+        getNeighborsJob.join()
     }
 
     private fun addBoundary(self: Line) {
