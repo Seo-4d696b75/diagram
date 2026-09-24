@@ -5,6 +5,7 @@ package com.seo4d696b75.diagram.station
 import com.seo4d696b75.diagram.station.model.GeoJsonFeature
 import com.seo4d696b75.diagram.station.model.GeoJsonGeometry
 import com.seo4d696b75.diagram.station.model.HighVoronoiStation
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.Assertions
@@ -51,7 +52,7 @@ class HighVoronoiTest {
         "外周部2_稚内, 1111553",
         "外周部3_犬吠, 9933509",
     )
-    fun `高次ボロノイの計算`(label: String, code: Int) {
+    fun `高次ボロノイの計算`(label: String, code: Int) = runTest {
         val center = stations.first { it.code == code }
         val actual = stations.calculateHighVoronoi(highVoronoiLevel, center)
 
