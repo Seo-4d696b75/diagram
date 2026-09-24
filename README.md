@@ -4,7 +4,7 @@
 [ドロネー図・ボロノイ図の描画アルゴリズムの説明](https://qiita.com/Seo-4d696b75/items/c088f5b853010507224c)
 
 [![Maven version](https://img.shields.io/maven-central/v/com.seo4d696b75.diagram/core)](https://central.sonatype.com/artifact/com.seo4d696b75.diagram/core)
-![License MIT](https://img.shields.io/badge/Apache_2.0-9E9F9F?label=License)]
+![License MIT](https://img.shields.io/badge/Apache_2.0-9E9F9F?label=License)
 
 > [!IMPORTANT]
 > バージョン により公開方式が異なります
@@ -64,6 +64,28 @@ val rect = Rectangle(0, 0, 0, 0)
 
 val diagram = VoronoiDiagram(points)
 diagram.split(rect)
+```
+
+### 高次ボロノイ図
+
+**HighVoronoi.kt**
+
+```kt
+// 中心点
+val center: Point
+// すべての母点を含む矩形範囲
+val rect = Rectangle(0, 0, 0, 0)
+// 隣接点の定義
+val provider = HighVoronoi.PointProvider { point ->
+    listOf<Point>()
+}
+
+val diagram = HighVoronoi(boundary.container)
+val result = diagram.solve(
+    level = 20,
+    center = center,
+    provider = provider,
+)
 ```
 
 ## station パッケージ
