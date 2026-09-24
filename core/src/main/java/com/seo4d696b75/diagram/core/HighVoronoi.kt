@@ -44,7 +44,7 @@ class HighVoronoi(
         /**
          * 各n次ボロノイ図が計算されると順次呼ばれる
          * 
-         * @param index  0始まりでカウントした次数 `[0,level)`
+         * @param index  次数 `[1,level]`
          * @param points 閉じた多角形
          */
         fun onResolved(index: Int, points: Polygon, milliseconds: Long)
@@ -100,6 +100,8 @@ class HighVoronoi(
         provider: PointProvider,
         callback: ResultCallback? = null,
     ): List<Polygon> = coroutineScope {
+        require(level >= 1) { "level must be >= 1" }
+
         this@HighVoronoi.center = center
         this@HighVoronoi.provider = provider
 
@@ -153,7 +155,7 @@ class HighVoronoi(
             expandJob.join()
 
             callback?.onResolved(
-                index = currentLevel - 1,
+                index = currentLevel,
                 points = result.last(),
                 milliseconds = System.currentTimeMillis() - loopTime,
             )
@@ -175,37 +177,38 @@ class HighVoronoi(
             next: Node,
             previous: Point,
         ) = previousNodes.let { list ->
-            var next: Node? = null
-            var previous: Point
             if (list == null) {
+                // level = 1
                 val history = mutableSetOf<Point>()
                 val sample = bisectors[0]
-                next = requireNotNull(sample.intersections[1].node) {
+                var next: Node = requireNotNull(sample.intersections[1].node) {
                     "first node of an intersection not found (level=1)"
                 }
-                previous = sample.intersections[0]
-                while (history.add(next!!)) {
+                var previous: Point = sample.intersections[0]
+                while (history.add(next)) {
                     val current = next
                     next = current.nextDown(previous)
                     previous = current
                 }
+                next to previous
             } else {
-                previous = list.last()
+                // level > 1
+                var next: Node? = null
+                var previous: Point = list.last()
                 for (n in list) {
                     next = n.nextUp(previous)
                     previous = n
                     if (next != null && !next.hasSolved()) break
                 }
+                requireNotNull(next) {
+                    "traverse start node not found."
+                }
+                next to previous
             }
+        }
 
-            requireNotNull(next) {
-                "traverse start node not found."
-            }
-            require(!next.hasSolved()) {
-                "traverse start node must NOT been solved."
-            }
-
-            next to previous
+        require(!next.hasSolved()) {
+            "traverse start node must NOT been solved."
         }
 
         val start = next
@@ -630,10 +633,10 @@ class HighVoronoi(
             } else {
                 val midIndex = (indexFrom + indexTo - 1) / 2
                 val mid = intersections[midIndex]
+                // Note: equal intersection coordinates are ignored, same as 0.3.0 and before.
                 return when {
                     point < mid -> addIntersection(point, indexFrom, midIndex)
-                    point > mid -> addIntersection(point, midIndex + 1, indexTo)
-                    else -> throw IllegalArgumentException()
+                    else -> addIntersection(point, midIndex + 1, indexTo)
                 }
             }
         }
