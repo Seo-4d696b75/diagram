@@ -1,10 +1,7 @@
 package com.seo4d696b75.diagram.core
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import java.util.LinkedList
+import java.util.Queue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -99,7 +96,7 @@ class HighVoronoi(
         center: Point,
         provider: PointProvider,
         callback: ResultCallback? = null,
-    ): List<Polygon> = coroutineScope {
+    ): List<Polygon> {
         require(level >= 1) { "level must be >= 1" }
 
         this@HighVoronoi.center = center
@@ -126,33 +123,22 @@ class HighVoronoi(
         for (currentLevel in 1..level) {
             val loopTime = System.currentTimeMillis()
 
-            val queue = Channel<Point>(capacity = Channel.BUFFERED)
+            val queue: Queue<Point> = LinkedList()
+            val nodes = traverse(previousNodes, queue)
+            for (n in nodes) n.onSolved(currentLevel)
+            previousNodes = nodes
 
-            // 走査する範囲内の交点は全て計算済みと仮定するため、
-            // 交点の追加処理とは並行して実行可能
-            val nodes = async {
-                val list = traverse(previousNodes, queue)
-                for (n in list) n.onSolved(currentLevel)
+            val polygon = Polygon(nodes)
+            result.add(polygon)
 
-                val polygon = Polygon(list)
-                result.add(polygon)
-
-                list
-            }
-
-            val expandJob = launch {
-                // 隣接点の確認＆交点の追加計算は直列で行う
-                for (request in queue) {
-                    if (currentLevel < level) {
-                        // 次数が増えるほど交点の数は2乗のオーダーで増加する
-                        // 最後の計算は不要なためスキップ
-                        expandDelaunayPoints(request)
-                    }
+            // 隣接点の確認＆交点の追加計算
+            for (request in queue) {
+                if (currentLevel < level) {
+                    // 次数が増えるほど交点の数は2乗のオーダーで増加する
+                    // 最後の計算は不要なためスキップ
+                    expandDelaunayPoints(request)
                 }
             }
-
-            previousNodes = nodes.await()
-            expandJob.join()
 
             callback?.onResolved(
                 index = currentLevel,
@@ -166,12 +152,12 @@ class HighVoronoi(
         }
 
         callback?.onCompleted(result, System.currentTimeMillis() - time)
-        result
+        return result
     }
 
-    private suspend fun traverse(
+    private fun traverse(
         previousNodes: List<Node>?,
-        requestQueue: Channel<Point>,
+        requestQueue: Queue<Point>,
     ): List<Node> {
         var (
             next: Node,
@@ -222,7 +208,7 @@ class HighVoronoi(
                     next.p2.line.delaunayPoint,
                 )
                     .filter { requestedPoints.add(it) }
-                    .forEach { requestQueue.send(it) }
+                    .forEach { requestQueue.offer(it) }
 
                 // traverse
                 val current = next
@@ -231,9 +217,6 @@ class HighVoronoi(
                 if (start == next) break
                 add(next)
             }
-
-            // close queue
-            requestQueue.close()
         }
     }
 
@@ -346,7 +329,12 @@ class HighVoronoi(
             }
         }
 
-        fun next(current: Intersection, other: Intersection, forward: Boolean, step: Int): Node {
+        private fun next(
+            current: Intersection,
+            other: Intersection,
+            forward: Boolean,
+            step: Int
+        ): Node {
             val intersection = if (onBoundary && index > 0) {
                 // 頂点がFrame境界線上（Vertexではない）でかつ
                 // この頂点が解決済みなら無視して同じ境界線上のお隣さんへ辿る
