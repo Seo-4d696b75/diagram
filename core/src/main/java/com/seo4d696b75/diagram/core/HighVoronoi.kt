@@ -581,10 +581,10 @@ class HighVoronoi(
             } else {
                 val midIndex = (indexFrom + indexTo - 1) / 2
                 val mid = intersections[midIndex]
+                // Note: equal intersection coordinates are ignored, same as 0.3.0 and before.
                 return when {
                     point < mid -> addIntersection(point, indexFrom, midIndex)
-                    point > mid -> addIntersection(point, midIndex + 1, indexTo)
-                    else -> throw IllegalArgumentException()
+                    else -> addIntersection(point, midIndex + 1, indexTo)
                 }
             }
         }
