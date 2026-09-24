@@ -126,37 +126,38 @@ class HighVoronoi(
             next: Node,
             previous: Point,
         ) = previousNodes.let { list ->
-            var next: Node? = null
-            var previous: Point
             if (list == null) {
+                // level = 1
                 val history = mutableSetOf<Point>()
                 val sample = bisectors[0]
-                next = requireNotNull(sample.intersections[1].node) {
+                var next: Node = requireNotNull(sample.intersections[1].node) {
                     "first node of an intersection not found (level=1)"
                 }
-                previous = sample.intersections[0]
-                while (history.add(next!!)) {
+                var previous: Point = sample.intersections[0]
+                while (history.add(next)) {
                     val current = next
                     next = current.nextDown(previous)
                     previous = current
                 }
+                next to previous
             } else {
-                previous = list.last()
+                // level > 1
+                var next: Node? = null
+                var previous: Point = list.last()
                 for (n in list) {
                     next = n.nextUp(previous)
                     previous = n
                     if (next != null && !next.hasSolved()) break
                 }
+                requireNotNull(next) {
+                    "traverse start node not found."
+                }
+                next to previous
             }
+        }
 
-            requireNotNull(next) {
-                "traverse start node not found."
-            }
-            require(!next.hasSolved()) {
-                "traverse start node must NOT been solved."
-            }
-
-            next to previous
+        require(!next.hasSolved()) {
+            "traverse start node must NOT been solved."
         }
 
         val start = next
