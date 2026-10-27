@@ -14,6 +14,14 @@ kotlin {
     jvmToolchain(17)
 }
 
+// run on check-pr workflow
+tasks.register<Task>("checkPr") {
+    dependsOn(
+        "core:test",
+        "station:test",
+    )
+}
+
 // publish each module
 tasks.register<Task>("publish") {
     dependsOn(
