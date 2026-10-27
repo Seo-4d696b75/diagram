@@ -82,28 +82,22 @@ public class KdTree<E extends Point> {
 
         private void checkNeighbor(E p) {
             double dist = Math.pow(p.getX() - query.getX(), 2) + Math.pow(p.getY() - query.getY(), 2);
-            int index = -1;
             int size = neighbors.size();
-            if (size > 0 && dist < neighbors.get(size - 1).sqrtDist) {
-                index = size - 1;
-                while (index > 0) {
-                    if (dist >= neighbors.get(index - 1).sqrtDist) break;
-                    index--;
-                }
-
-
-            } else if (size == 0) {
-                index = 0;
+            // k個揃っていて最大距離以上なら追加しない
+            if (size == k && dist >= neighbors.get(size - 1).sqrtDist) return;
+            int index = size;
+            while (index > 0) {
+                if (dist >= neighbors.get(index - 1).sqrtDist) break;
+                index--;
             }
-            if (index >= 0) {
-                Neighbor<E> n = new Neighbor<>(p, dist);
-                neighbors.add(index, n);
-                if (size == k) neighbors.remove(k);
-            }
+            Neighbor<E> n = new Neighbor<>(p, dist);
+            neighbors.add(index, n);
+            if (size == k) neighbors.remove(k);
         }
 
         private double getMaxSqrtDist() {
-            return neighbors.isEmpty() ? Double.MAX_VALUE : neighbors.get(neighbors.size() - 1).sqrtDist;
+            // k個揃うまでは枝切りしない
+            return neighbors.size() < k ? Double.MAX_VALUE : neighbors.get(neighbors.size() - 1).sqrtDist;
         }
 
     }
@@ -113,6 +107,7 @@ public class KdTree<E extends Point> {
     }
 
     public Neighbors<E> search(Point query, int k) {
+        if (k <= 0) throw new IllegalArgumentException("k must be positive: " + k);
         Neighbors<E> result = new Neighbors<>(k, query);
         searchInternal(mRoot, result);
         return result;
